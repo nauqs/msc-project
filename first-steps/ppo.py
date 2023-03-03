@@ -23,7 +23,7 @@ ACTION_INIT_STD = 0.05
 STD_HALVING_TIMESTEPS = 100000
 
 # Define environment
-env = gym.make('Pendulum-v1')#, render_mode="human")
+env = gym.make('Pendulum-v1', new_step_api=True)#, render_mode="human")
 
 # Define models
 actor_net = ActorNet(env.observation_space.shape[0], env.action_space.shape[0])
@@ -48,7 +48,8 @@ def collect_trajectories(n_trajectories, env, gamma):
         while not done:
             states.append(obs)
             action, log_prob, _ = actor_net.get_action(torch.tensor(obs, dtype=torch.float32))
-            obs, reward, done, _ = env.step(action)
+            obs, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
             log_probs.append(log_prob)
             actions.append(action)
             episode_rewards.append(reward)
@@ -64,7 +65,7 @@ def collect_trajectories(n_trajectories, env, gamma):
             episode_rtgs.insert(0, G) # insert reversed
         rewards_to_go += episode_rtgs
 
-    states = torch.tensor(states, dtype=torch.float32)
+    states = torch.tensor(np.array(states), dtype=torch.float32)
     actions = torch.tensor(actions, dtype=torch.float32)
     log_probs = torch.tensor(log_probs, dtype=torch.float32)
     rewards_to_go = torch.tensor(rewards_to_go, dtype=torch.float32)
@@ -94,10 +95,10 @@ for k in range(N_EPOCHS):
     if k%1==0: 
       print("sum of reward per episode:", sum(rewards)/EPISODES_PER_BATCH)
       #print(sum([abs(x)<1 for x in rewards]))
-    if k%10==9:
-      plt.clf()
-      plt.plot([x[0] for x in log], [x[1] for x in log], linewidth=1)
-      plt.show()
+    #if k%10==9:
+      #plt.clf()
+      #plt.plot([x[0] for x in log], [x[1] for x in log], linewidth=1)
+      #plt.show()
 
     assert states.shape[0] == actions.shape[0]
     assert states.shape[0] == rewards_to_go.shape[0]
