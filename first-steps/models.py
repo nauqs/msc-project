@@ -32,7 +32,7 @@ class ActorNet(nn.Module):
         return action.detach(), policy.log_prob(action), policy.entropy()
 
     def save(self, filename='actor.pth'):
-        torch.save(self.state_dict(), filename)
+        torch.save(self.mean_net, filename)
 
 
 class CriticNet(nn.Module):
@@ -50,7 +50,7 @@ class CriticNet(nn.Module):
         return self.net(state)
 
     def save(self, filename='critic.pth'):
-        torch.save(self.state_dict(), filename)
+        torch.save(self.net, filename)
 
 
 class ActorNet2(nn.Module):
