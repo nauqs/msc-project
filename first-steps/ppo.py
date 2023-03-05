@@ -1,138 +1,100 @@
-import gym #gym===0.25.2
+# https://github.com/Kaixhin/spinning-up-basic/blob/master/ppo.py
+
+import gym
 import tqdm
 import torch
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 
-from models import ActorNet
+from models import ActorNet, CriticNet
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ### PPO CLIP HYPERPARAMS
-NET_HIDDEN = (64, 64)
-N_EPOCHS = 300
-EPISODES_PER_BATCH = 16
+HIDDEN_SIZE = 32
+OPTIMIZER_LR = 1e-3
+MAX_TIMESTEPS = 200000
+TIMESTEPS_PER_BATCH = 2400
 DISCOUNT_FACTOR = 0.99
-UPDATE_EPOCHS = 10
-ENTROPY_COEFFICIENT = 0
+TRACE_DECAY = 0.97## LOOK AT THIS
 PPO_CLIP = 0.2
-MINI_BATCH_SIZE = 64
-OPTIMIZER_LR = 3e-4
-ACTION_INIT_STD = 0.05
-STD_HALVING_TIMESTEPS = 100000
+PPO_EPOCHS = 60
+VALUE_EPOCHS = 5
+PRINT_EVERY_N_TIMESTEPS = 5000 # set to MAX_TIMESTEPS+1 
 
 # Define environment
-env = gym.make('Pendulum-v1', new_step_api=True)#, render_mode="human")
+env = gym.make('Pendulum-v1', new_step_api=True)
 
 # Define models
-actor_net = ActorNet(env.observation_space.shape[0], env.action_space.shape[0])
-critic_net = nn.Sequential(
-              nn.Linear(env.observation_space.shape[0], NET_HIDDEN[0]),
-              nn.Tanh(),
-              nn.Linear(NET_HIDDEN[0], NET_HIDDEN[1]),
-              nn.Tanh(),
-              nn.Linear(NET_HIDDEN[1], 1)
-              )
+actor_net = ActorNet(env.observation_space.shape[0], env.action_space.shape[0], hidden_dim=HIDDEN_SIZE)
+critic_net = CriticNet(env.observation_space.shape[0], HIDDEN_SIZE)
+actor_optimiser = torch.optim.Adam(actor_net.parameters(), lr=OPTIMIZER_LR)
+critic_optimiser = torch.optim.Adam(critic_net.parameters(), lr=OPTIMIZER_LR)
 
-def collect_trajectories(n_trajectories, env, gamma):
+# Initialise environment state
+state = torch.tensor(env.reset())
+total_reward, done = 0, False
+trajectories = []
 
-    global log, t
-    states, actions, rewards, rewards_to_go, log_probs = [], [], [], [], []
+for step in range(MAX_TIMESTEPS):
 
-    for episode in range(n_trajectories): 
-        obs = env.reset()
-        done = False
-        episode_rewards = []
+  # Collect set of trajectories trajectories by running current policy
+  action, log_prob_action, _ = actor_net.get_action(state)
+  value = critic_net(state)
+  next_state, reward, terminated, truncated, _ = env.step(action)
+  done = terminated or truncated
+  total_reward += reward
+  trajectories.append({'state': state.unsqueeze(0), 
+                      'action': action.unsqueeze(0), 
+                      'reward': torch.tensor([reward]), 
+                      'done': torch.tensor([done], dtype=torch.float32), 
+                      'log_prob_action': log_prob_action.unsqueeze(0), 
+                      'old_log_prob_action': log_prob_action.unsqueeze(0).detach(), 
+                      'value': value.unsqueeze(0)})
+  state = torch.tensor(next_state)
 
-        while not done:
-            states.append(obs)
-            action, log_prob, _ = actor_net.get_action(torch.tensor(obs, dtype=torch.float32))
-            obs, reward, terminated, truncated, _ = env.step(action)
-            done = terminated or truncated
-            log_probs.append(log_prob)
-            actions.append(action)
-            episode_rewards.append(reward)
-            t += 1
+  if done: 
+    if (step+1)%PRINT_EVERY_N_TIMESTEPS==0: print(f"\n Step: {step+1} | Reward: {total_reward}")
+    state, total_reward = torch.tensor(env.reset()), 0
+    
+    if len(trajectories) >= TIMESTEPS_PER_BATCH:
+      # Compute rewards-to-go R and advantage estimates based on the current value function V
+      with torch.no_grad():
+        reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])  # No bootstrapping needed for next value here as only updated at end of an episode
+        for episode_step in trajectories[::-1]:
+          reward_to_go = episode_step['reward'] + DISCOUNT_FACTOR * reward_to_go
+          episode_step['reward_to_go'] = reward_to_go
+          TD_error = episode_step['reward'] + DISCOUNT_FACTOR * next_value - episode_step['value']
+          advantage = TD_error +  DISCOUNT_FACTOR * TRACE_DECAY * advantage
+          episode_step['advantage'] = advantage
+          next_value = episode_step['value']
+          if episode_step["done"]:
+            reward_to_go, next_value, advantage = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
+      
+      batch = {k: torch.cat([trajectory[k] for trajectory in trajectories], dim=0) for k in trajectories[0].keys()}
+      batch['advantage'] = (batch['advantage'] - batch['advantage'].mean()) / (batch['advantage'].std() + 1e-8)
+      trajectories = []
 
-        rewards += episode_rewards
-        if episode % 5 == 0: log.append((t, sum(episode_rewards)))
+      # Update the policy by maximising the PPO-Clip objective
+      for _ in range(PPO_EPOCHS):
+        ratio = (batch['log_prob_action'] - batch['old_log_prob_action']).exp()
+        clipped_ratio = torch.clamp(ratio, min=1 - PPO_CLIP, max=1 + PPO_CLIP)
+        adv = batch['advantage']
+        policy_loss = -torch.min(ratio * adv, clipped_ratio * adv).mean()
+        actor_optimiser.zero_grad()
+        policy_loss.backward()
+        actor_optimiser.step()
+        batch['log_prob_action'] = actor_net.get_action(batch['state'], action=batch['action'].detach())[1]
 
-        episode_rtgs = []
-        G = 0
-        for r in episode_rewards[::-1]:
-            G = r + gamma * G
-            episode_rtgs.insert(0, G) # insert reversed
-        rewards_to_go += episode_rtgs
+      # Fit value function by regression on mean-squared error
+      for _ in range(VALUE_EPOCHS):
+        value_loss = (batch['value'] - batch['reward_to_go']).pow(2).mean()
+        critic_optimiser.zero_grad()
+        value_loss.backward()
+        critic_optimiser.step()
+        batch['value'] = critic_net(batch['state'])
 
-    states = torch.tensor(np.array(states), dtype=torch.float32)
-    actions = torch.tensor(actions, dtype=torch.float32)
-    log_probs = torch.tensor(log_probs, dtype=torch.float32)
-    rewards_to_go = torch.tensor(rewards_to_go, dtype=torch.float32)
-
-    return states, actions, log_probs, rewards_to_go, rewards
-
-# TRAINING
-
-t = 0
-log = []
-
-for k in range(N_EPOCHS):
-
-    if k%1==0: print(f"Epoch {k} (timesteps so far {t})")
-
-    ## Collect batch of trajectories D_k and rewards-to-go by running current policy
-    trajectories = collect_trajectories(n_trajectories=EPISODES_PER_BATCH, 
-                                      env=env, 
-                                      gamma=DISCOUNT_FACTOR)
-    states, actions, log_probs, rewards_to_go, rewards = trajectories
-
-    ## Compute advantage estimates based on the current value function
-    estimated_values = critic_net(torch.tensor(np.array(states), dtype=torch.float32)).squeeze().detach()
-    advantages = rewards_to_go - estimated_values
-    advantages = (advantages - advantages.mean()) / advantages.std() # improves stability?
-
-    if k%1==0: 
-      print("sum of reward per episode:", sum(rewards)/EPISODES_PER_BATCH)
-      #print(sum([abs(x)<1 for x in rewards]))
-    #if k%10==9:
-      #plt.clf()
-      #plt.plot([x[0] for x in log], [x[1] for x in log], linewidth=1)
-      #plt.show()
-
-    assert states.shape[0] == actions.shape[0]
-    assert states.shape[0] == rewards_to_go.shape[0]
-    assert states.shape[0] == log_probs.shape[0]
-    assert states.shape[0] == advantages.shape[0]
-        
-    actor_optimizer = torch.optim.Adam(actor_net.parameters(), lr=OPTIMIZER_LR)
-    critic_optimizer = torch.optim.Adam(critic_net.parameters(), lr=OPTIMIZER_LR)
-
-    ## Update policy by maximising the PPO-Clip objective (via SGA - Adam)
-    for i in range(UPDATE_EPOCHS):
-
-        L = states.shape[0]
-        indices = torch.randperm(L)
-        for j in range(L//MINI_BATCH_SIZE):
-            mb_idx = indices[j*MINI_BATCH_SIZE:(j+1)*MINI_BATCH_SIZE] # minibatch indices
-
-            #  PPO-Clip loss
-            _, new_log_probs, entropy = actor_net.get_action(states[mb_idx], actions[mb_idx])
-            ratio = torch.exp(new_log_probs - log_probs[mb_idx])
-            # clip(r(theta), 1+eps, 1-eps)
-            clipped_ratio = torch.clamp(ratio, 1 - PPO_CLIP, 1 + PPO_CLIP) 
-            # L_CLIP = min(r*A, clipped(r)*A) (objective to maximize)
-            actor_loss = - torch.min(ratio * advantages[mb_idx], clipped_ratio * advantages[mb_idx]).mean() #-ENTROPY_COEFFICIENT*entropy
-            #print("actor loss", actor_loss.item())
-
-            actor_optimizer.zero_grad()
-            actor_loss.backward(retain_graph=True)
-            actor_optimizer.step()
-
-            predicted_rtgs = critic_net(states[mb_idx]).squeeze()
-            critic_loss = nn.MSELoss()(predicted_rtgs, rewards_to_go[mb_idx])
-
-            critic_optimizer.zero_grad()
-            critic_loss.backward()
-            critic_optimizer.step()
-        
+# Save the networks
+actor_net.save()
+critic_net.save()
