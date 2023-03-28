@@ -24,7 +24,7 @@ VALUE_EPOCHS = 5
 PRINT_EVERY_N_TIMESTEPS = 5000 # set to MAX_TIMESTEPS+1 
 
 # Define environment
-env = gym.make('Pendulum-v1', new_step_api=True)
+env = gym.make('Pendulum-v1')
 
 # Define models
 actor_net = ActorNet(env.observation_space.shape[0], env.action_space.shape[0], hidden_dim=HIDDEN_SIZE)
@@ -42,8 +42,7 @@ for step in range(MAX_TIMESTEPS):
   # Collect set of trajectories trajectories by running current policy
   action, log_prob_action, _ = actor_net.get_action(state)
   value = critic_net(state)
-  next_state, reward, terminated, truncated, _ = env.step(action)
-  done = terminated or truncated
+  next_state, reward, done, _ = env.step(action)
   total_reward += reward
   trajectories.append({'state': state.unsqueeze(0), 
                       'action': action.unsqueeze(0), 
