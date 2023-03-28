@@ -7,7 +7,9 @@ import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 
-from models import ActorNet, CriticNet
+import sys
+sys.path.append('../')
+from models import DiscreteActorNet, CriticNet
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -28,7 +30,7 @@ env = gym.make('CartPole-v1')
 
 
 # Define models
-actor_net = ActorNet(env.observation_space.shape[0], env.action_space.n, hidden_dim=HIDDEN_SIZE)
+actor_net = DiscreteActorNet(env.observation_space.shape[0], env.action_space.n, hidden_dim=HIDDEN_SIZE)
 critic_net = CriticNet(env.observation_space.shape[0], HIDDEN_SIZE)
 actor_optimiser = torch.optim.Adam(actor_net.parameters(), lr=OPTIMIZER_LR)
 critic_optimiser = torch.optim.Adam(critic_net.parameters(), lr=OPTIMIZER_LR)

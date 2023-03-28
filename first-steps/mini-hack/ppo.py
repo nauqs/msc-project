@@ -9,7 +9,6 @@ import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 
-# import ActorNet from ../models.py
 import sys
 sys.path.append('../')
 from models import DiscreteActorNet, CriticNet
@@ -26,7 +25,7 @@ TRACE_DECAY = 0.97## LOOK AT THIS
 PPO_CLIP = 0.2
 PPO_EPOCHS = 60
 VALUE_EPOCHS = 5
-PRINT_EVERY_N_TIMESTEPS = 1 # set to MAX_TIMESTEPS+1 
+PRINT_EVERY_N_TIMESTEPS = 10 # set to MAX_TIMESTEPS+1 
 
 # Restrict actions to movement and navigation
 MOVE_ACTIONS = tuple(nethack.CompassDirection)
@@ -54,7 +53,7 @@ actor_net = DiscreteActorNet(obs_dim, env.action_space.n, hidden_dim=HIDDEN_SIZE
 critic_net = CriticNet(obs_dim, HIDDEN_SIZE)
 actor_optimiser = torch.optim.Adam(actor_net.parameters(), lr=OPTIMIZER_LR)
 critic_optimiser = torch.optim.Adam(critic_net.parameters(), lr=OPTIMIZER_LR)
-episode_length = 0
+episode_length, batch_count = 0, 0
 
 for step in range(MAX_TIMESTEPS):
 
@@ -76,12 +75,16 @@ for step in range(MAX_TIMESTEPS):
 
   if done: 
     # print step, reward and length of last episode
-    if (step+1)%PRINT_EVERY_N_TIMESTEPS==0: print(f"\n Step: {step+1} | Reward: {total_reward:.2f} | Episode length: {episode_length}")
+    if (step+1)%PRINT_EVERY_N_TIMESTEPS==0: pass#print(f"\n Step: {step+1} | Reward: {total_reward:.2f} | Episode length: {episode_length}")
     state, total_reward = env.reset(), 0
     state_tensor = torch.cat([torch.tensor(state[key].flatten(), dtype=torch.float32) for key in state.keys()])
     episode_length = 0
     
     if len(trajectories) >= TIMESTEPS_PER_BATCH:
+      batch_count += 1
+      episodes_done = float(sum([trajectory['done'].item() for trajectory in trajectories]))
+      print(f"\nTimestep: {step+1}, batch {batch_count}")
+      print(f"Average reward: {sum([trajectory['reward'].item() for trajectory in trajectories])/episodes_done:.2f} | Average episode length: {float(len(trajectories))/episodes_done:.2f}")
       # Compute rewards-to-go R and advantage estimates based on the current value function V
       with torch.no_grad():
         reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])  # No bootstrapping needed for next value here as only updated at end of an episode
