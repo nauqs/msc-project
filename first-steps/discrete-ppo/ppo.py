@@ -21,10 +21,10 @@ TRACE_DECAY = 0.97## LOOK AT THIS
 PPO_CLIP = 0.2
 PPO_EPOCHS = 60
 VALUE_EPOCHS = 5
-PRINT_EVERY_N_TIMESTEPS = 100 # set to MAX_TIMESTEPS+1 
+PRINT_EVERY_N_TIMESTEPS = 10 # set to MAX_TIMESTEPS+1 
 
 # Define environment
-env = gym.make('CartPole-v1', new_step_api=True)
+env = gym.make('CartPole-v1')
 
 
 # Define models
@@ -43,9 +43,7 @@ for step in range(MAX_TIMESTEPS):
   # Collect set of trajectories trajectories by running current policy
   action, log_prob_action, _ = actor_net.get_action(state)
   value = critic_net(state)
-  #print(f"State: {state} | Action: {action} | Log prob action: {log_prob_action} | Value: {value}")
-  next_state, reward, terminated, truncated, _ = env.step(action.item())
-  done = terminated or truncated
+  next_state, reward, done, _ = env.step(action.item())
   total_reward += reward
   trajectories.append({'state': state.unsqueeze(0), 
                       'action': action.unsqueeze(0), 
