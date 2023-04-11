@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 import sys
 sys.path.append('../')
@@ -18,7 +19,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ### PPO CLIP HYPERPARAMS
 HIDDEN_SIZE = 32
 OPTIMIZER_LR = 1e-3
-MAX_TIMESTEPS = 200000
+MAX_TIMESTEPS = 100000
 TIMESTEPS_PER_BATCH = 2400
 DISCOUNT_FACTOR = 0.99
 TRACE_DECAY = 0.97## LOOK AT THIS
@@ -26,15 +27,41 @@ PPO_CLIP = 0.2
 PPO_EPOCHS = 60
 VALUE_EPOCHS = 5
 PRINT_EVERY_N_TIMESTEPS = 10 # set to MAX_TIMESTEPS+1 
+PLOT = True
+ENTROPY_BETA = 0.001
 
-# Restrict actions to movement and navigation
-MOVE_ACTIONS = tuple(nethack.CompassDirection)
-
+# Minihack hyperparams
+ROOM_TYPE = "" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
+ROOM_SIZE = "5x5" #"5x5", "15x15"
+room_str = f'{ROOM_TYPE+"-" if ROOM_TYPE!="" else ""}{ROOM_SIZE}'
+ENV_NAME = f'MiniHack-Room-{room_str}-v0'
+ACTION_KEYS = tuple(nethack.CompassDirection)  # Restrict actions to movement only
+OBS_KEYS = ("glyphs_crop", "blstats")
 # Define room minihack environment
-env = gym.make('MiniHack-Room-15x15-v0',
-               actions=MOVE_ACTIONS,
-               observation_keys=("glyphs", "chars", "colors")
+env = gym.make(ENV_NAME,
+               actions=ACTION_KEYS,
+               observation_keys=OBS_KEYS
 )
+
+# Plotting logs
+timesteps, rewards, episode_lengths = [], [], []
+timestamp = round(time.time())//1000
+
+def plot_logs(timesteps, rewards, episode_lengths):
+    # plot both rewards and episode lengths in same figure, but different scales
+    fig, ax1 = plt.subplots()
+    ax1.plot(timesteps, rewards, 'b-')
+    ax1.set_xlabel('Timestep')
+    ax1.set_ylabel('Average reward', color='b')
+    ax1.tick_params('y', colors='b')
+    ax2 = ax1.twinx()
+    ax2.plot(timesteps, episode_lengths, 'r-')
+    ax2.set_ylabel('Average episode length', color='r')
+    ax2.tick_params('y', colors='r')
+    plt.xlim(0, step+1)
+    plt.title(f'{ENV_NAME}\nobs: {", ".join(OBS_KEYS)}')
+    plt.savefig(f'figs/ppo_train_{room_str}_{timestamp}.png', dpi=200)
+    plt.close()
 
 # Initialise environment state
 state = env.reset()
@@ -58,7 +85,7 @@ episode_length, batch_count = 0, 0
 for step in range(MAX_TIMESTEPS):
 
   # Collect set of trajectories trajectories by running current policy
-  action, log_prob_action, _ = actor_net.get_action(state_tensor)
+  action, log_prob_action, entropy = actor_net.get_action(state_tensor)
   value = critic_net(state_tensor)
   next_state, reward, done, _ = env.step(action.item())
   total_reward += reward
@@ -68,6 +95,7 @@ for step in range(MAX_TIMESTEPS):
                       'done': torch.tensor([done], dtype=torch.float32), 
                       'log_prob_action': log_prob_action.unsqueeze(0), 
                       'old_log_prob_action': log_prob_action.unsqueeze(0).detach(), 
+                      'entropy': entropy.unsqueeze(0),
                       'value': value.unsqueeze(0)})
   state = next_state
   state_tensor = torch.cat([torch.tensor(state[key].flatten(), dtype=torch.float32) for key in state.keys()])
@@ -84,7 +112,14 @@ for step in range(MAX_TIMESTEPS):
       batch_count += 1
       episodes_done = float(sum([trajectory['done'].item() for trajectory in trajectories]))
       print(f"\nTimestep: {step+1}, batch {batch_count}")
-      print(f"Average reward: {sum([trajectory['reward'].item() for trajectory in trajectories])/episodes_done:.2f} | Average episode length: {float(len(trajectories))/episodes_done:.2f}")
+      average_reward = sum([trajectory['reward'].item() for trajectory in trajectories])/episodes_done
+      print(f"Average reward: {average_reward:.2f} | Average episode length: {float(len(trajectories))/episodes_done:.2f}")
+      if PLOT:
+        timesteps.append(step+1)
+        rewards.append(average_reward)
+        episode_lengths.append(float(len(trajectories))/episodes_done)
+        plot_logs(timesteps, rewards, episode_lengths)
+
       # Compute rewards-to-go R and advantage estimates based on the current value function V
       with torch.no_grad():
         reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])  # No bootstrapping needed for next value here as only updated at end of an episode
@@ -107,7 +142,8 @@ for step in range(MAX_TIMESTEPS):
         ratio = (batch['log_prob_action'] - batch['old_log_prob_action']).exp()
         clipped_ratio = torch.clamp(ratio, min=1 - PPO_CLIP, max=1 + PPO_CLIP)
         adv = batch['advantage']
-        policy_loss = -torch.min(ratio * adv, clipped_ratio * adv).mean()
+        entropy = batch['entropy']
+        policy_loss = -torch.min(ratio * adv, clipped_ratio * adv).mean() #- ENTROPY_BETA * entropy.mean()
         actor_optimiser.zero_grad()
         policy_loss.backward()
         actor_optimiser.step()
@@ -121,6 +157,6 @@ for step in range(MAX_TIMESTEPS):
         critic_optimiser.step()
         batch['value'] = critic_net(batch['state'])
 
-# Save the networks
-actor_net.save()
-critic_net.save()
+      # Save the networks
+      actor_net.save()
+      critic_net.save()
