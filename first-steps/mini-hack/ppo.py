@@ -19,7 +19,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ### PPO CLIP HYPERPARAMS
 HIDDEN_SIZE = 32
 OPTIMIZER_LR = 1e-3
-MAX_TIMESTEPS = 100000
+MAX_TIMESTEPS = 2000000
 TIMESTEPS_PER_BATCH = 2400
 DISCOUNT_FACTOR = 0.99
 TRACE_DECAY = 0.97## LOOK AT THIS
@@ -31,7 +31,7 @@ PLOT = True
 ENTROPY_BETA = 0.001
 
 # Minihack hyperparams
-ROOM_TYPE = "" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
+ROOM_TYPE = "Random" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
 ROOM_SIZE = "5x5" #"5x5", "15x15"
 room_str = f'{ROOM_TYPE+"-" if ROOM_TYPE!="" else ""}{ROOM_SIZE}'
 ENV_NAME = f'MiniHack-Room-{room_str}-v0'
@@ -47,17 +47,27 @@ env = gym.make(ENV_NAME,
 timesteps, rewards, episode_lengths = [], [], []
 timestamp = round(time.time())//1000
 
-def plot_logs(timesteps, rewards, episode_lengths):
+def plot_logs(timesteps, rewards, episode_lengths, smooth=True):
     # plot both rewards and episode lengths in same figure, but different scales
+    alpha_non_smoothed, n_smooth = 1, 10
+    smooth = smooth and len(rewards) > n_smooth
+    if smooth:
+        conv_smooth = np.ones((n_smooth,))/n_smooth
+        smoothed_rewards = np.convolve(rewards, conv_smooth, mode='valid')
+        smoothed_episode_lengths = np.convolve(episode_lengths, conv_smooth, mode='valid')
+        alpha_non_smoothed = 0.2
     fig, ax1 = plt.subplots()
-    ax1.plot(timesteps, rewards, 'b-')
+    ax1.plot(timesteps, rewards, 'b-', alpha=alpha_non_smoothed)
     ax1.set_xlabel('Timestep')
     ax1.set_ylabel('Average reward', color='b')
     ax1.tick_params('y', colors='b')
     ax2 = ax1.twinx()
-    ax2.plot(timesteps, episode_lengths, 'r-')
+    ax2.plot(timesteps, episode_lengths, 'r-', alpha=alpha_non_smoothed)
     ax2.set_ylabel('Average episode length', color='r')
     ax2.tick_params('y', colors='r')
+    if smooth:
+        ax1.plot(timesteps[n-1:], smoothed_rewards, 'b-')
+        ax2.plot(timesteps[n-1:], smoothed_episode_lengths, 'r-')
     plt.xlim(0, step+1)
     plt.title(f'{ENV_NAME}\nobs: {", ".join(OBS_KEYS)}')
     plt.savefig(f'figs/ppo_train_{room_str}_{timestamp}.png', dpi=200)
