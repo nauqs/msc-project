@@ -31,7 +31,7 @@ PLOT = True
 ENTROPY_BETA = 0.001
 
 # Minihack hyperparams
-ROOM_TYPE = "Random" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
+ROOM_TYPE = "" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
 ROOM_SIZE = "5x5" #"5x5", "15x15"
 room_str = f'{ROOM_TYPE+"-" if ROOM_TYPE!="" else ""}{ROOM_SIZE}'
 ENV_NAME = f'MiniHack-Room-{room_str}-v0'
@@ -49,7 +49,7 @@ timestamp = round(time.time())//1000
 
 def plot_logs(timesteps, rewards, episode_lengths, smooth=True):
     # plot both rewards and episode lengths in same figure, but different scales
-    alpha_non_smoothed, n_smooth = 1, 10
+    alpha_non_smoothed, n_smooth = 1, 5
     smooth = smooth and len(rewards) > n_smooth
     if smooth:
         conv_smooth = np.ones((n_smooth,))/n_smooth
@@ -66,8 +66,8 @@ def plot_logs(timesteps, rewards, episode_lengths, smooth=True):
     ax2.set_ylabel('Average episode length', color='r')
     ax2.tick_params('y', colors='r')
     if smooth:
-        ax1.plot(timesteps[n-1:], smoothed_rewards, 'b-')
-        ax2.plot(timesteps[n-1:], smoothed_episode_lengths, 'r-')
+        ax1.plot(timesteps[n_smooth-1:], smoothed_rewards, 'b-')
+        ax2.plot(timesteps[n_smooth-1:], smoothed_episode_lengths, 'r-')
     plt.xlim(0, step+1)
     plt.title(f'{ENV_NAME}\nobs: {", ".join(OBS_KEYS)}')
     plt.savefig(f'figs/ppo_train_{room_str}_{timestamp}.png', dpi=200)
@@ -168,5 +168,5 @@ for step in range(MAX_TIMESTEPS):
         batch['value'] = critic_net(batch['state'])
 
       # Save the networks
-      actor_net.save()
-      critic_net.save()
+      actor_net.save(filename=f'trained-models/actor_{room_str}_{timestamp}.pt')
+      critic_net.save(filename=f'trained-models/critic_{room_str}_{timestamp}.pt')
