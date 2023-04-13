@@ -31,7 +31,7 @@ PLOT = True
 ENTROPY_BETA = 0.001
 
 # Minihack hyperparams
-ROOM_TYPE = "" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
+ROOM_TYPE = "Random" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
 ROOM_SIZE = "5x5" #"5x5", "15x15"
 room_str = f'{ROOM_TYPE+"-" if ROOM_TYPE!="" else ""}{ROOM_SIZE}'
 ENV_NAME = f'MiniHack-Room-{room_str}-v0'
