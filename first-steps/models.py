@@ -23,10 +23,16 @@ class DiscreteActorNet(nn.Module):
         prob = F.softmax(self.l3(n), dim=softmax_dim)
         dist = torch.distributions.Categorical(prob)
         if action is None:
-            action = dist.sample()
+            action = torch.multinomial(prob, 1)
+            #action = dist.sample()
+        else:
+            action = action.squeeze()
         # return action, log prob of action, entropy
-        entropy = dist.entropy().unsqueeze(0)
-        log_prob_action = dist.log_prob(action).unsqueeze(0)
+        #entropy = -torch.sum(prob*torch.log(prob)).unsqueeze(0)
+        entropy = dist.entropy()
+        #entropy = torch.zeros_like(entropy) # this works (?)
+        #log_prob_action = torch.log(prob.gather(softmax_dim, action))
+        log_prob_action = dist.log_prob(action)
         return action.detach(), log_prob_action, entropy
 
     def save(self, filename='actor.pth'):

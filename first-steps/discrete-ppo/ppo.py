@@ -24,6 +24,7 @@ PPO_CLIP = 0.2
 PPO_EPOCHS = 60
 VALUE_EPOCHS = 5
 PRINT_EVERY_N_TIMESTEPS = 10 # set to MAX_TIMESTEPS+1 
+ENTROPY_BETA = 0.001
 
 # Define environment
 env = gym.make('CartPole-v1')
@@ -79,15 +80,20 @@ for step in range(MAX_TIMESTEPS):
       trajectories = []
 
       # Update the policy by maximising the PPO-Clip objective
+      entropy = actor_net.get_action(batch['state'], action=batch['action'])[2].unsqueeze(-1)
       for _ in range(PPO_EPOCHS):
+        assert batch['log_prob_action'].shape == batch['old_log_prob_action'].shape
         ratio = (batch['log_prob_action'] - batch['old_log_prob_action']).exp()
         clipped_ratio = torch.clamp(ratio, min=1 - PPO_CLIP, max=1 + PPO_CLIP)
         adv = batch['advantage']
-        policy_loss = -torch.min(ratio * adv, clipped_ratio * adv).mean()
+        assert ratio.shape == adv.shape == entropy.shape
+        policy_loss = -torch.min(ratio * adv, clipped_ratio * adv).mean() - ENTROPY_BETA * entropy.mean()
         actor_optimiser.zero_grad()
         policy_loss.backward()
         actor_optimiser.step()
-        batch['log_prob_action'] = actor_net.get_action(batch['state'], action=batch['action'].detach())[1]
+        _, batch['log_prob_action'], entropy = actor_net.get_action(batch['state'], action=batch['action'].detach())
+        batch['log_prob_action'] = batch['log_prob_action'].unsqueeze(-1)
+        entropy = entropy.unsqueeze(-1)
 
       # Fit value function by regression on mean-squared error
       for _ in range(VALUE_EPOCHS):
