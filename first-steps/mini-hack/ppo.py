@@ -9,6 +9,7 @@ import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+torch.autograd.set_detect_anomaly(True)
 
 import sys
 sys.path.append('../')
@@ -81,8 +82,8 @@ trajectories = []
 obs_dim = state_tensor.shape[0]
 
 print(f"\nObservation space: (flattened shape {obs_dim})")
-for keys in env.observation_space:
-  print(f"  {keys}: {env.observation_space[keys]}")
+#for keys in env.observation_space:
+  #print(f"  {keys}: {env.observation_space[keys]}")
 print("Action space:", env.action_space, "\n")
 
 # Define models
@@ -103,9 +104,9 @@ for step in range(MAX_TIMESTEPS):
                       'action': action.unsqueeze(0), 
                       'reward': torch.tensor([reward]), 
                       'done': torch.tensor([done], dtype=torch.float32), 
-                      'log_prob_action': log_prob_action.unsqueeze(0), 
-                      'old_log_prob_action': log_prob_action.unsqueeze(0).detach(), 
-                      'entropy': entropy.unsqueeze(0),
+                      'log_prob_action': log_prob_action, 
+                      'old_log_prob_action': log_prob_action.detach(), 
+                      'entropy': entropy,
                       'value': value.unsqueeze(0)})
   state = next_state
   state_tensor = torch.cat([torch.tensor(state[key].flatten(), dtype=torch.float32) for key in state.keys()])
@@ -148,22 +149,22 @@ for step in range(MAX_TIMESTEPS):
       trajectories = []
 
       # Update the policy by maximising the PPO-Clip objective
+      entropy = actor_net.get_action(batch['state'], action=batch['action'])[2]
       for _ in range(PPO_EPOCHS):
         ratio = (batch['log_prob_action'] - batch['old_log_prob_action']).exp()
         clipped_ratio = torch.clamp(ratio, min=1 - PPO_CLIP, max=1 + PPO_CLIP)
         adv = batch['advantage']
-        entropy = batch['entropy']
-        policy_loss = -torch.min(ratio * adv, clipped_ratio * adv).mean() #- ENTROPY_BETA * entropy.mean()
+        policy_loss = -torch.min(ratio * adv, clipped_ratio * adv).mean() - ENTROPY_BETA * entropy.mean()
         actor_optimiser.zero_grad()
         policy_loss.backward()
         actor_optimiser.step()
-        batch['log_prob_action'] = actor_net.get_action(batch['state'], action=batch['action'].detach())[1]
+        _, batch['log_prob_action'], entropy = actor_net.get_action(batch['state'], action=batch['action'].detach())
 
       # Fit value function by regression on mean-squared error
       for _ in range(VALUE_EPOCHS):
         value_loss = (batch['value'] - batch['reward_to_go']).pow(2).mean()
         critic_optimiser.zero_grad()
-        value_loss.backward()
+        value_loss.backward(retain_graph=True)
         critic_optimiser.step()
         batch['value'] = critic_net(batch['state'])
 
