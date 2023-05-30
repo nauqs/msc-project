@@ -19,19 +19,15 @@ class DiscreteActorNet(nn.Module):
         return n
 
     def get_action(self, state, action=None, softmax_dim=0):
+        state = state.flatten(start_dim=state.dim()-2)
         n = self.forward(state)
         prob = F.softmax(self.l3(n), dim=softmax_dim)
         dist = torch.distributions.Categorical(prob)
         if action is None:
             action = torch.multinomial(prob, 1)
-            #action = dist.sample()
         else:
             action = action.squeeze()
-        # return action, log prob of action, entropy
-        #entropy = -torch.sum(prob*torch.log(prob)).unsqueeze(0)
         entropy = dist.entropy()
-        #entropy = torch.zeros_like(entropy) # this works (?)
-        #log_prob_action = torch.log(prob.gather(softmax_dim, action))
         log_prob_action = dist.log_prob(action)
         return action.detach(), log_prob_action, entropy
 
@@ -64,7 +60,6 @@ class ContActorNet(nn.Module):
         policy = torch.distributions.Normal(mean, log_std.exp())
         if action is None:
             action = policy.rsample()
-            #if abs(state[0])<0.01: print(mean, log_std.exp(), action)
         return action.detach(), policy.log_prob(action), policy.entropy()
 
     def save(self, filename='actor.pth'):
@@ -83,7 +78,93 @@ class CriticNet(nn.Module):
         )
 
     def forward(self, state):
+        state = state.flatten(start_dim=state.dim()-2)
         return self.net(state)
 
     def save(self, filename='critic.pth'):
         torch.save(self.net, filename)
+
+
+class ConvBase(nn.Module):
+    def __init__(self):
+        super(ConvBase, self).__init__()
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+
+    def forward(self, x):
+        x = x.unsqueeze(x.dim()-2)  # add channel dimension
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, start_dim=1)
+        return x
+
+class MiniHackActorNet(nn.Module):
+
+    def __init__(self, action_dim=8, cnn=False):
+        super(MiniHackActorNet, self).__init__()
+
+        self.cnn = cnn
+        if self.cnn:
+            self.conv_base = ConvBase()
+            self.l1 = nn.Linear(32*5*19, 64)
+        else:
+            self.l1 = nn.Linear(21*79, 64)
+        
+        self.l2 = nn.Linear(64, 64)
+        self.l3 = nn.Linear(64, action_dim)
+
+    def forward(self, state):
+        if self.cnn:
+            state = self.conv_base(state).flatten(start_dim=state.dim()-2)
+        else:
+            state = state.flatten(start_dim=state.dim()-2)
+        n = torch.tanh(self.l1(state))
+        n = torch.tanh(self.l2(n))
+        return n
+    
+    def get_action(self, state, action=None, softmax_dim=0):
+        n = self.forward(state)
+        prob = F.softmax(self.l3(n), dim=softmax_dim)
+        dist = torch.distributions.Categorical(prob)
+        if action is None:
+            action = torch.multinomial(prob, 1)
+        else:
+            action = action.squeeze()
+        entropy = dist.entropy()
+        log_prob_action = dist.log_prob(action)
+        return action.detach(), log_prob_action, entropy
+
+    
+    def save(self, filename='actor.pth'):
+        torch.save(self, filename)
+
+
+
+class MiniHackCriticNet(nn.Module):
+    def __init__(self, cnn=False):
+        super(MiniHackCriticNet, self).__init__()
+
+        self.cnn = cnn
+        if self.cnn:
+            self.conv_base = ConvBase()
+            self.l1 = nn.Linear(32*5*19, 64)
+        else:
+            self.l1 = nn.Linear(21*79, 64)
+        
+        self.l2 = nn.Linear(64, 64)
+        self.l3 = nn.Linear(64, 1)
+
+    def forward(self, state):
+        if self.cnn:
+            state = self.conv_base(state).flatten(start_dim=state.dim()-2)
+        else:
+            state = state.flatten(start_dim=state.dim()-2)
+        n = torch.tanh(self.l1(state))
+        n = torch.tanh(self.l2(n))
+        n = self.l3(n)
+        return n
+    
+    def save(self, filename='critic.pth'):
+        torch.save(self, filename)
+
