@@ -27,11 +27,7 @@ class DiscreteActorNet(nn.Module):
             #action = dist.sample()
         else:
             action = action.squeeze()
-        # return action, log prob of action, entropy
-        #entropy = -torch.sum(prob*torch.log(prob)).unsqueeze(0)
         entropy = dist.entropy()
-        #entropy = torch.zeros_like(entropy) # this works (?)
-        #log_prob_action = torch.log(prob.gather(softmax_dim, action))
         log_prob_action = dist.log_prob(action)
         return action.detach(), log_prob_action, entropy
 
@@ -87,3 +83,70 @@ class CriticNet(nn.Module):
 
     def save(self, filename='critic.pth'):
         torch.save(self.net, filename)
+
+class ConvBase(nn.Module):
+    def __init__(self):
+        super(ConvBase, self).__init__()
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.gap = nn.AdaptiveAvgPool2d(1) 
+
+    def forward(self, x):
+        if x.dim() == 3: x = x.unsqueeze(0)  # add batch dimension
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.gap(x)
+        x = torch.flatten(x, start_dim=1)
+        return x
+    
+
+class MiniHackCriticNet(nn.Module):
+    def __init__(self, conv_output_dim=32, hidden_dim=64):
+        super(MiniHackCriticNet, self).__init__()
+
+        self.conv_base = ConvBase()
+        self.l1 = nn.Linear(conv_output_dim, hidden_dim)
+        self.l2 = nn.Linear(hidden_dim, hidden_dim)
+        self.l3 = nn.Linear(hidden_dim, 1) 
+
+    def forward(self, state):
+        n = self.conv_base(state)
+        n = torch.tanh(self.l1(n))
+        n = torch.tanh(self.l2(n))
+        n = self.l3(n) 
+        return n
+
+    def save(self, filename='critic.pth'):
+        torch.save(self, filename)
+
+
+class MiniHackActorNet(nn.Module):
+    def __init__(self, conv_output_dim=32, action_dim=8, hidden_dim=64):
+        super(MiniHackActorNet, self).__init__()
+
+        self.conv_base = ConvBase()
+        self.l1 = nn.Linear(conv_output_dim, hidden_dim)
+        self.l2 = nn.Linear(hidden_dim, hidden_dim)
+        self.l3 = nn.Linear(hidden_dim, action_dim)
+
+    def forward(self, state):
+        n = self.conv_base(state)
+        n = torch.tanh(self.l1(n))
+        n = torch.tanh(self.l2(n))
+        return n
+
+    def get_action(self, state, action=None, softmax_dim=0):
+        n = self.forward(state)
+        prob = F.softmax(self.l3(n), dim=softmax_dim)
+        dist = torch.distributions.Categorical(prob)
+        if action is None:
+            action = dist.sample()
+        else:
+            action = action.squeeze()
+        entropy = dist.entropy()
+        log_prob_action = dist.log_prob(action)
+        return action.detach(), log_prob_action, entropy
+
+    def save(self, filename='actor.pth'):
+        torch.save(self, filename)
