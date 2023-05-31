@@ -4,6 +4,8 @@ import numpy as np
 
 MAX_PATIENCE = 1000
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 class TrajectoryCollector:
     def __init__(self, env, agent, discount_factor, trace_decay):
         self.env = env
@@ -22,6 +24,7 @@ class TrajectoryCollector:
         rewards = 0
 
         while len(trajectories) < timesteps_per_batch or not done:
+            state_tensor = state_tensor.to(device)
             action, log_prob_action, _ = self.agent.actor_net.get_action(state_tensor)
             value = self.agent.critic_net(state_tensor)
             next_state, reward, done, _ = self.env.step(action.item())
