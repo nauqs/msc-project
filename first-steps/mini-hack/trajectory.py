@@ -24,8 +24,11 @@ class TrajectoryCollector:
         rewards = 0
 
         while len(trajectories) < timesteps_per_batch or not done:
+            print("to device")
             state_tensor = state_tensor.to(device)
+            print("agent get action")
             action, log_prob_action, _ = self.agent.actor_net.get_action(state_tensor)
+            print("critic get value")
             value = self.agent.critic_net(state_tensor)
             next_state, reward, done, _ = self.env.step(action.item())
 
