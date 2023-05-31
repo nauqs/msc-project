@@ -103,9 +103,10 @@ class ConvBase(nn.Module):
 
 class MiniHackActorNet(nn.Module):
 
-    def __init__(self, action_dim=8, cnn=False):
+    def __init__(self, action_dim=8, cnn=False, device='cpu'):
         super(MiniHackActorNet, self).__init__()
 
+        self.device = device
         self.cnn = cnn
         if self.cnn:
             self.conv_base = ConvBase()
@@ -132,6 +133,7 @@ class MiniHackActorNet(nn.Module):
         if action is None:
             action = torch.multinomial(prob, 1)
         else:
+            action = action.to(self.device)
             action = action.squeeze()
         entropy = dist.entropy()
         log_prob_action = dist.log_prob(action)
@@ -144,9 +146,10 @@ class MiniHackActorNet(nn.Module):
 
 
 class MiniHackCriticNet(nn.Module):
-    def __init__(self, cnn=False):
+    def __init__(self, cnn=False, device='cpu'):
         super(MiniHackCriticNet, self).__init__()
 
+        self.device = device
         self.cnn = cnn
         if self.cnn:
             self.conv_base = ConvBase()
