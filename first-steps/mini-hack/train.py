@@ -1,9 +1,12 @@
+print("Running train.py")
 import gym
 import minihack
 from nle import nethack
+print("Imported gym, minihack, nethack")
 import torch
 import torch.nn as nn
 import numpy as np
+print("Imported torch, torch.nn, numpy")
 import time
 
 from utils import plot_logs
@@ -44,17 +47,21 @@ env = gym.make(ENV_NAME,
 )
 timestamp = round(time.time())//100
 
+print("Initialise models")
 # Initialize models
-actor_net = MiniHackActorNet(cnn=True)
-critic_net = MiniHackCriticNet(cnn=True)
+actor_net = MiniHackActorNet(cnn=True, device=device)
+critic_net = MiniHackCriticNet(cnn=True, device=device)
 
+print("Initialise agent")
 # Initialize PPO Agent
 agent = PPOAgent(actor_net, critic_net, OPTIMIZER_LR, PPO_CLIP, PPO_EPOCHS, VALUE_EPOCHS, ENTROPY_BETA)
 
+print("Initialise Trajectory Collector")
 # Initialize Trajectory Collector
 collector = TrajectoryCollector(env, agent, DISCOUNT_FACTOR, TRACE_DECAY)
 
 for step in range(MAX_TIMESTEPS):
+    print(f"Step {step}")
 
     # Collect Trajectories
     batch, info = collector.collect_trajectories(TIMESTEPS_PER_BATCH)
