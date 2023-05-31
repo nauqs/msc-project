@@ -23,7 +23,7 @@ def plot_logs(timesteps, rewards, episode_lengths, step, smooth=True, title="ppo
     if smooth:
         ax1.plot(timesteps[n_smooth-1:], smoothed_rewards, 'b-')
         ax2.plot(timesteps[n_smooth-1:], smoothed_episode_lengths, 'r-')
-    plt.xlim(0, step+1)
+    plt.xlim(0, timesteps[-1]*1.05)
     plt.title(title)
     plt.savefig(save_path, dpi=200)
     plt.close()

@@ -20,7 +20,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 HIDDEN_SIZE = 32
 OPTIMIZER_LR = 1e-3
 MAX_TIMESTEPS = 2000000
-TIMESTEPS_PER_BATCH = 2400
+TIMESTEPS_PER_BATCH = 2048
 DISCOUNT_FACTOR = 0.99
 TRACE_DECAY = 0.97## LOOK AT THIS
 PPO_CLIP = 0.2
@@ -62,7 +62,7 @@ for step in range(MAX_TIMESTEPS):
     # Plot and print
     if PLOT: plot_logs(info["timestep_history"], info["reward_history"], info["length_history"], step,
                        title=f'{ENV_NAME}\nobs: {", ".join(OBS_KEYS)}',
-                       save_path=f'figs/{room_str}_{timestamp}.png')
+                       save_path=f'figs/ppo_{room_str}_{timestamp}.png')
     print("Timestep", info["timestep_history"][-1])
     # transform previous line to f string with .2f formatting
     print("Mean reward {:.2f} | Mean episode length {:.2f}".format(info["reward_history"][-1], info["length_history"][-1]))
