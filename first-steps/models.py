@@ -90,12 +90,14 @@ class ConvBase(nn.Module):
         super(ConvBase, self).__init__()
         self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
 
     def forward(self, x):
         x = x.unsqueeze(x.dim()-2)  # add channel dimension
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
         x = torch.flatten(x, start_dim=1)
         return x
 
@@ -107,11 +109,11 @@ class MiniHackActorNet(nn.Module):
         self.cnn = cnn
         if self.cnn:
             self.conv_base = ConvBase()
-            self.l1 = nn.Linear(32*5*19, 64)
+            self.l1 = nn.Linear(64*2*9, 256)
         else:
-            self.l1 = nn.Linear(21*79, 64)
+            self.l1 = nn.Linear(21*79, 256)
         
-        self.l2 = nn.Linear(64, 64)
+        self.l2 = nn.Linear(256, 64)
         self.l3 = nn.Linear(64, action_dim)
 
     def forward(self, state):
@@ -148,11 +150,11 @@ class MiniHackCriticNet(nn.Module):
         self.cnn = cnn
         if self.cnn:
             self.conv_base = ConvBase()
-            self.l1 = nn.Linear(32*5*19, 64)
+            self.l1 = nn.Linear(64*2*9, 256)
         else:
-            self.l1 = nn.Linear(21*79, 64)
+            self.l1 = nn.Linear(21*79, 256)
         
-        self.l2 = nn.Linear(64, 64)
+        self.l2 = nn.Linear(256, 64)
         self.l3 = nn.Linear(64, 1)
 
     def forward(self, state):

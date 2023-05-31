@@ -33,7 +33,7 @@ PLOT = True
 ENTROPY_BETA = 0.001
 
 # Minihack hyperparams
-ROOM_TYPE = "" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
+ROOM_TYPE = "Random" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
 ROOM_SIZE = "5x5" #"5x5", "15x15"
 room_str = f'{ROOM_TYPE+"-" if ROOM_TYPE!="" else ""}{ROOM_SIZE}'
 ENV_NAME = f'MiniHack-Room-{room_str}-v0'
@@ -156,7 +156,8 @@ for step in range(MAX_TIMESTEPS):
 
       # Update the policy by maximising the PPO-Clip objective
       entropy = actor_net.get_action(batch['state'], action=batch['action'])[2]
-      for _ in range(PPO_EPOCHS):
+      for epoch in range(PPO_EPOCHS):
+        print("Update actor epoch", epoch)
         ratio = (batch['log_prob_action'] - batch['old_log_prob_action']).exp()
         clipped_ratio = torch.clamp(ratio, min=1 - PPO_CLIP, max=1 + PPO_CLIP)
         adv = batch['advantage']
@@ -170,7 +171,8 @@ for step in range(MAX_TIMESTEPS):
         entropy = entropy.unsqueeze(-1) 
 
       # Fit value function by regression on mean-squared error
-      for _ in range(VALUE_EPOCHS):
+      for epoch in range(VALUE_EPOCHS):
+        print("Update critic epoch", epoch)
         value_loss = (batch['value'] - batch['reward_to_go']).pow(2).mean()
         critic_optimiser.zero_grad()
         value_loss.backward(retain_graph=True)
