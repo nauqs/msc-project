@@ -13,6 +13,7 @@ torch.autograd.set_detect_anomaly(True)
 
 import sys
 sys.path.append('../')
+from models import MiniHackActorNet, MiniHackCriticNet
 from models import DiscreteActorNet, CriticNet
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -37,7 +38,7 @@ ROOM_SIZE = "5x5" #"5x5", "15x15"
 room_str = f'{ROOM_TYPE+"-" if ROOM_TYPE!="" else ""}{ROOM_SIZE}'
 ENV_NAME = f'MiniHack-Room-{room_str}-v0'
 ACTION_KEYS = tuple(nethack.CompassDirection)  # Restrict actions to movement only
-OBS_KEYS = ("glyphs_crop", "blstats")
+OBS_KEYS = ("glyphs",)
 # Define room minihack environment
 env = gym.make(ENV_NAME,
                actions=ACTION_KEYS,
@@ -76,10 +77,11 @@ def plot_logs(timesteps, rewards, episode_lengths, smooth=True):
 
 # Initialise environment state
 state = env.reset()
-state_tensor = torch.cat([torch.tensor(state[key].flatten(), dtype=torch.float32) for key in state.keys()])
+#state_tensor = torch.cat([torch.tensor(state[key].flatten(), dtype=torch.float32) for key in state.keys()])
+state_tensor = torch.cat([torch.tensor(state[key], dtype=torch.float32) for key in state.keys()])
 total_reward, done = 0, False
 trajectories = []
-obs_dim = state_tensor.shape[0]
+obs_dim = state_tensor.shape
 
 print(f"\nObservation space: (flattened shape {obs_dim})")
 #for keys in env.observation_space:
@@ -87,16 +89,19 @@ print(f"\nObservation space: (flattened shape {obs_dim})")
 print("Action space:", env.action_space, "\n")
 
 # Define models
-actor_net = DiscreteActorNet(obs_dim, env.action_space.n, hidden_dim=HIDDEN_SIZE)
-critic_net = CriticNet(obs_dim, HIDDEN_SIZE)
+#actor_net = DiscreteActorNet(21*79, env.action_space.n, hidden_dim=HIDDEN_SIZE)
+#critic_net = CriticNet(21*79, HIDDEN_SIZE)
+actor_net = MiniHackActorNet(cnn=True)
+critic_net = MiniHackCriticNet(cnn=True)
 actor_optimiser = torch.optim.Adam(actor_net.parameters(), lr=OPTIMIZER_LR)
 critic_optimiser = torch.optim.Adam(critic_net.parameters(), lr=OPTIMIZER_LR)
 episode_length, batch_count = 0, 0
 
+
 for step in range(MAX_TIMESTEPS):
 
   # Collect set of trajectories trajectories by running current policy
-  action, log_prob_action, entropy = actor_net.get_action(state_tensor)
+  action, log_prob_action, _ = actor_net.get_action(state_tensor)
   value = critic_net(state_tensor)
   next_state, reward, done, _ = env.step(action.item())
   total_reward += reward
@@ -104,19 +109,20 @@ for step in range(MAX_TIMESTEPS):
                       'action': action.unsqueeze(0), 
                       'reward': torch.tensor([reward]), 
                       'done': torch.tensor([done], dtype=torch.float32), 
-                      'log_prob_action': log_prob_action, 
-                      'old_log_prob_action': log_prob_action.detach(), 
-                      'entropy': entropy,
+                      'log_prob_action': log_prob_action.unsqueeze(0), 
+                      'old_log_prob_action': log_prob_action.unsqueeze(0).detach(), 
                       'value': value.unsqueeze(0)})
   state = next_state
-  state_tensor = torch.cat([torch.tensor(state[key].flatten(), dtype=torch.float32) for key in state.keys()])
+  #state_tensor = torch.cat([torch.tensor(state[key].flatten(), dtype=torch.float32) for key in state.keys()])
+  state_tensor = torch.cat([torch.tensor(state[key], dtype=torch.float32) for key in state.keys()])
   episode_length += 1
 
   if done: 
     # print step, reward and length of last episode
     if (step+1)%PRINT_EVERY_N_TIMESTEPS==0: pass#print(f"\n Step: {step+1} | Reward: {total_reward:.2f} | Episode length: {episode_length}")
     state, total_reward = env.reset(), 0
-    state_tensor = torch.cat([torch.tensor(state[key].flatten(), dtype=torch.float32) for key in state.keys()])
+    #state_tensor = torch.cat([torch.tensor(state[key].flatten(), dtype=torch.float32) for key in state.keys()])
+    state_tensor = torch.cat([torch.tensor(state[key], dtype=torch.float32) for key in state.keys()])
     episode_length = 0
     
     if len(trajectories) >= TIMESTEPS_PER_BATCH:
@@ -150,18 +156,23 @@ for step in range(MAX_TIMESTEPS):
 
       # Update the policy by maximising the PPO-Clip objective
       entropy = actor_net.get_action(batch['state'], action=batch['action'])[2]
-      for _ in range(PPO_EPOCHS):
+      for epoch in range(PPO_EPOCHS):
+        print("Update actor epoch", epoch)
         ratio = (batch['log_prob_action'] - batch['old_log_prob_action']).exp()
         clipped_ratio = torch.clamp(ratio, min=1 - PPO_CLIP, max=1 + PPO_CLIP)
         adv = batch['advantage']
         policy_loss = -torch.min(ratio * adv, clipped_ratio * adv).mean() - ENTROPY_BETA * entropy.mean()
+        assert adv.shape == ratio.shape == clipped_ratio.shape
         actor_optimiser.zero_grad()
         policy_loss.backward()
         actor_optimiser.step()
         _, batch['log_prob_action'], entropy = actor_net.get_action(batch['state'], action=batch['action'].detach())
+        batch['log_prob_action'] = batch['log_prob_action'].unsqueeze(-1)
+        entropy = entropy.unsqueeze(-1) 
 
       # Fit value function by regression on mean-squared error
-      for _ in range(VALUE_EPOCHS):
+      for epoch in range(VALUE_EPOCHS):
+        print("Update critic epoch", epoch)
         value_loss = (batch['value'] - batch['reward_to_go']).pow(2).mean()
         critic_optimiser.zero_grad()
         value_loss.backward(retain_graph=True)
