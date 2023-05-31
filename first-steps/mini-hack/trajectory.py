@@ -18,7 +18,9 @@ class TrajectoryCollector:
 
     def collect_trajectories(self, timesteps_per_batch):
         trajectories = []
+        print("env reset")
         state = self.env.reset()
+        print("torch cat")
         state_tensor = torch.cat([torch.tensor(state[key], dtype=torch.float32) for key in state.keys()])
         timesteps = 0
         rewards = 0
