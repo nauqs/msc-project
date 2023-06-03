@@ -6,8 +6,10 @@ class PPOAgent(nn.Module):
     def __init__(self, actor_net, critic_net, optimizer_lr, ppo_clip, ppo_epochs, value_epochs, entropy_beta):
         super(PPOAgent, self).__init__()
 
-        self.actor_net = actor_net
-        self.critic_net = critic_net
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        self.actor_net = actor_net.to(self.device)
+        self.critic_net = critic_net.to(self.device)
         self.ppo_clip = ppo_clip
         self.ppo_epochs = ppo_epochs
         self.value_epochs = value_epochs
@@ -19,15 +21,15 @@ class PPOAgent(nn.Module):
         # Update the policy by maximising the PPO-Clip objective
         entropy = self.actor_net.get_action(batch['state'], action=batch['action'])[2]
         for epoch in range(self.ppo_epochs):
-            ratio = (batch['log_prob_action'] - batch['old_log_prob_action']).exp()
+            ratio = (batch['log_prob_action'].to(self.device) - batch['old_log_prob_action'].to(self.device)).exp()
             clipped_ratio = torch.clamp(ratio, min=1 - self.ppo_clip, max=1 + self.ppo_clip)
-            adv = batch['advantage']
+            adv = batch['advantage'].to(self.device)
             policy_loss = -torch.min(ratio * adv, clipped_ratio * adv).mean() - self.entropy_beta * entropy.mean()
             assert adv.shape == ratio.shape == clipped_ratio.shape
             self.actor_optimiser.zero_grad()
             policy_loss.backward()
             self.actor_optimiser.step()
-            _, batch['log_prob_action'], entropy = self.actor_net.get_action(batch['state'], action=batch['action'].detach())
+            _, batch['log_prob_action'], entropy = self.actor_net.get_action(batch['state'], action=batch['action'].detach().to(self.device))
             batch['log_prob_action'] = batch['log_prob_action'].unsqueeze(-1)
             entropy = entropy.unsqueeze(-1)
         if save:
@@ -36,7 +38,7 @@ class PPOAgent(nn.Module):
     def update_critic(self, batch, save=False, save_path="saved-models/critic.pth"):
         # Fit value function by regression on mean-squared error
         for epoch in range(self.value_epochs):
-            value_loss = (batch['value'] - batch['reward_to_go']).pow(2).mean()
+            value_loss = (batch['value'].to(self.device) - batch['reward_to_go'].to(self.device)).pow(2).mean()
             self.critic_optimiser.zero_grad()
             value_loss.backward(retain_graph=True)
             self.critic_optimiser.step()

@@ -31,7 +31,7 @@ PLOT = True
 ENTROPY_BETA = 0.01
 
 # Minihack hyperparams
-ROOM_TYPE = "" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
+ROOM_TYPE = "Random" #"", "Random", "Dark", "Monster", "Trap, "Ultimate"
 ROOM_SIZE = "5x5" #"5x5", "15x15"
 room_str = f'{ROOM_TYPE+"-" if ROOM_TYPE!="" else ""}{ROOM_SIZE}'
 ENV_NAME = f'MiniHack-Room-{room_str}-v0'
@@ -44,9 +44,11 @@ env = gym.make(ENV_NAME,
 )
 timestamp = round(time.time())//100
 
+print("Device is", device)
+
 # Initialize models
-actor_net = MiniHackActorNet(cnn=True)
-critic_net = MiniHackCriticNet(cnn=True)
+actor_net = MiniHackActorNet(cnn=True, device=device)
+critic_net = MiniHackCriticNet(cnn=True, device=device)
 
 # Initialize PPO Agent
 agent = PPOAgent(actor_net, critic_net, OPTIMIZER_LR, PPO_CLIP, PPO_EPOCHS, VALUE_EPOCHS, ENTROPY_BETA)
@@ -55,6 +57,7 @@ agent = PPOAgent(actor_net, critic_net, OPTIMIZER_LR, PPO_CLIP, PPO_EPOCHS, VALU
 collector = TrajectoryCollector(env, agent, DISCOUNT_FACTOR, TRACE_DECAY)
 
 for step in range(MAX_TIMESTEPS):
+    print(f"Step {step}")
 
     # Collect Trajectories
     batch, info = collector.collect_trajectories(TIMESTEPS_PER_BATCH)
