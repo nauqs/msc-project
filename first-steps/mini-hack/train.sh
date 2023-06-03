@@ -15,7 +15,7 @@
 cd /cluster/project2/tithonus/msc-project/first-steps/mini-hack
 free -g
 echo "Assigned device: $CUDA_VISIBLE_DEVICES"
-nvidia-smi
 
 mkdir -p logs
+echo "Running train.py"
 /cluster/project2/tithonus/anaconda3/bin/conda run -n msc-project python -u train.py &>> logs/logs.txt
