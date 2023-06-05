@@ -19,7 +19,6 @@ class DiscreteActorNet(nn.Module):
         return n
 
     def get_action(self, state, action=None, softmax_dim=0):
-        state = state.flatten(start_dim=state.dim()-2)
         n = self.forward(state)
         prob = F.softmax(self.l3(n), dim=softmax_dim)
         dist = torch.distributions.Categorical(prob)
@@ -78,7 +77,6 @@ class CriticNet(nn.Module):
         )
 
     def forward(self, state):
-        state = state.flatten(start_dim=state.dim()-2)
         return self.net(state)
 
     def save(self, filename='critic.pth'):
