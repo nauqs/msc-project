@@ -51,7 +51,7 @@ for step in range(MAX_TIMESTEPS):
   total_reward += reward
   trajectories.append({'state': state.unsqueeze(0), 
                       'action': action.unsqueeze(0), 
-                      'reward': torch.tensor([reward]), 
+                      'reward': torch.tensor([reward]).to(device), 
                       'done': torch.tensor([done], dtype=torch.float32), 
                       'log_prob_action': log_prob_action.unsqueeze(0), 
                       'old_log_prob_action': log_prob_action.unsqueeze(0).detach(), 
@@ -76,7 +76,7 @@ for step in range(MAX_TIMESTEPS):
           if episode_step["done"]:
             reward_to_go, next_value, advantage = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
       
-      batch = {k: torch.cat([trajectory[k] for trajectory in trajectories], dim=0) for k in trajectories[0].keys()}
+      batch = {k: torch.cat([trajectory[k] for trajectory in trajectories], dim=0).to(device) for k in trajectories[0].keys()}
       batch['advantage'] = (batch['advantage'] - batch['advantage'].mean()) / (batch['advantage'].std() + 1e-8)
       trajectories = []
 
