@@ -6,9 +6,11 @@ _half_log_2pi_ = 0.5*torch.log(torch.tensor(2*torch.pi))
 
 class DiscreteActorNet(nn.Module):
 
-    def __init__(self, state_dim, action_dim, hidden_dim=64):
+    def __init__(self, state_dim, action_dim, hidden_dim=64, device='cpu'):
         super(DiscreteActorNet, self).__init__()
         
+        self.device = device
+
         self.l1 = nn.Linear(state_dim, hidden_dim)
         self.l2 = nn.Linear(hidden_dim, hidden_dim)
         self.l3 = nn.Linear(hidden_dim, action_dim)
@@ -19,7 +21,7 @@ class DiscreteActorNet(nn.Module):
         return n
 
     def get_action(self, state, action=None, softmax_dim=0):
-        state = state.flatten(start_dim=state.dim()-2)
+        state = state.to(self.device)
         n = self.forward(state)
         prob = F.softmax(self.l3(n), dim=softmax_dim)
         dist = torch.distributions.Categorical(prob)
@@ -67,8 +69,9 @@ class ContActorNet(nn.Module):
 
 
 class CriticNet(nn.Module):
-    def __init__(self, state_dim, hidden_size):
+    def __init__(self, state_dim, hidden_size, device='cpu'):
         super(CriticNet, self).__init__()
+        self.device = device
         self.net = nn.Sequential(
             nn.Linear(state_dim, hidden_size),
             nn.Tanh(),
@@ -78,7 +81,7 @@ class CriticNet(nn.Module):
         )
 
     def forward(self, state):
-        state = state.flatten(start_dim=state.dim()-2)
+        state = state.to(self.device)
         return self.net(state)
 
     def save(self, filename='critic.pth'):
