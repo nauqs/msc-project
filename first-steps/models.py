@@ -11,9 +11,9 @@ class DiscreteActorNet(nn.Module):
         
         self.device = device
 
-        self.l1 = nn.Linear(state_dim, hidden_dim)
-        self.l2 = nn.Linear(hidden_dim, hidden_dim)
-        self.l3 = nn.Linear(hidden_dim, action_dim)
+        self.l1 = nn.Linear(state_dim, hidden_dim).to(device)
+        self.l2 = nn.Linear(hidden_dim, hidden_dim).to(device)
+        self.l3 = nn.Linear(hidden_dim, action_dim).to(device)
 
     def forward(self, state):
         n = torch.tanh(self.l1(state))
@@ -78,7 +78,7 @@ class CriticNet(nn.Module):
             nn.Linear(hidden_size, hidden_size),
             nn.Tanh(),
             nn.Linear(hidden_size, 1)
-        )
+        ).to(device)
 
     def forward(self, state):
         state = state.to(self.device)
