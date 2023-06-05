@@ -12,6 +12,7 @@ sys.path.append('../')
 from models import DiscreteActorNet, CriticNet
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print("Device is", device)
 
 ### PPO CLIP HYPERPARAMS
 HIDDEN_SIZE = 32
@@ -31,8 +32,8 @@ env = gym.make('CartPole-v1')
 
 
 # Define models
-actor_net = DiscreteActorNet(env.observation_space.shape[0], env.action_space.n, hidden_dim=HIDDEN_SIZE)
-critic_net = CriticNet(env.observation_space.shape[0], HIDDEN_SIZE)
+actor_net = DiscreteActorNet(env.observation_space.shape[0], env.action_space.n, hidden_dim=HIDDEN_SIZE, device=device)
+critic_net = CriticNet(env.observation_space.shape[0], HIDDEN_SIZE, device=device)
 actor_optimiser = torch.optim.Adam(actor_net.parameters(), lr=OPTIMIZER_LR)
 critic_optimiser = torch.optim.Adam(critic_net.parameters(), lr=OPTIMIZER_LR)
 
