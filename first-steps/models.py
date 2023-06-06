@@ -109,13 +109,13 @@ class ConvBaseMinigrid(nn.Module):
         super(ConvBaseMinigrid, self).__init__()
         self.conv1 = nn.Conv2d(n_channels, 16, kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
-        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        #self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
+        #x = self.pool(F.relu(self.conv3(x)))
         x = torch.flatten(x, start_dim=x.dim()-3)
         return x
     
@@ -125,7 +125,7 @@ class MinigridActorNet(nn.Module):
     def __init__(self, obs_dim, action_dim, cnn=False, device='cpu'):
         super(MinigridActorNet, self).__init__()
 
-        self.hs = [512, 64]
+        self.hs = [64, 32]
         self.device = device
         self.cnn = cnn
         self.obs_dim = torch.tensor(obs_dim)
@@ -179,7 +179,7 @@ class MinigridCriticNet(nn.Module):
     def __init__(self, obs_dim, cnn=False, device='cpu'):
         super(MinigridCriticNet, self).__init__()
 
-        self.hs = [512, 64]
+        self.hs = [64, 32]
         self.device = device
         self.cnn = cnn
         self.obs_dim = torch.tensor(obs_dim)
@@ -216,7 +216,7 @@ class MiniHackActorNet(nn.Module):
         self.cnn = cnn
         if self.cnn:
             self.conv_base = ConvBase()
-            self.l1 = nn.Linear(3040, 256)
+            self.l1 = nn.Linear(1152, 256)
         else:
             self.l1 = nn.Linear(21*79, 256)
         
@@ -259,7 +259,7 @@ class MiniHackCriticNet(nn.Module):
         self.cnn = cnn
         if self.cnn:
             self.conv_base = ConvBase()
-            self.l1 = nn.Linear(3040, 256)
+            self.l1 = nn.Linear(1152, 256)
         else:
             self.l1 = nn.Linear(21*79, 256)
         

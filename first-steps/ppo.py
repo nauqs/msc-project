@@ -17,8 +17,9 @@ class PPO(nn.Module):
         self.actor_optimiser = torch.optim.Adam(self.actor_net.parameters(), lr=optimizer_lr)
         self.critic_optimiser = torch.optim.Adam(self.critic_net.parameters(), lr=optimizer_lr)
 
-    def update_actor(self, batch, save=False, save_path="saved-models/actor.pth"):
+    def update_actor(self, batch, save=False, verbose=True, save_path="saved-models/actor.pth"):
         # Update the policy by maximising the PPO-Clip objective
+        total_loss = 0
         entropy = self.actor_net.get_action(batch['state'], action=batch['action'])[2]
         for epoch in range(self.ppo_epochs):
             ratio = (batch['log_prob_action'].to(self.device) - batch['old_log_prob_action'].to(self.device)).exp()
@@ -32,18 +33,27 @@ class PPO(nn.Module):
             _, batch['log_prob_action'], entropy = self.actor_net.get_action(batch['state'], action=batch['action'].detach().to(self.device))
             batch['log_prob_action'] = batch['log_prob_action'].unsqueeze(-1)
             entropy = entropy.unsqueeze(-1)
+            total_loss += policy_loss
         if save:
             self.actor_net.save(filename=save_path)
+        if verbose:
+            print(f"Actor loss {total_loss/self.ppo_epochs:.3f}")
+        return total_loss.detach().item()  / self.ppo_epochs
 
-    def update_critic(self, batch, save=False, save_path="saved-models/critic.pth"):
+    def update_critic(self, batch, save=False, verbose=True, save_path="saved-models/critic.pth"):
         # Fit value function by regression on mean-squared error
+        total_loss = 0
         for epoch in range(self.value_epochs):
             value_loss = (batch['value'].to(self.device) - batch['reward_to_go'].to(self.device)).pow(2).mean()
             self.critic_optimiser.zero_grad()
             value_loss.backward(retain_graph=True)
             self.critic_optimiser.step()
             batch['value'] = self.critic_net(batch['state'])
+            total_loss += value_loss
         if save:
             self.critic_net.save(filename=save_path)
+        if verbose:
+            print(f"Critic loss {total_loss/self.value_epochs:.3f}")
+        return total_loss.detach().item() / self.value_epochs
 
 
