@@ -20,10 +20,10 @@ class DiscreteActorNet(nn.Module):
         n = torch.tanh(self.l2(n))
         return n
 
-    def get_action(self, state, action=None, softmax_dim=0):
+    def get_action(self, state, action=None, softmax_dim=0):  # TODO: check softmax dim (possible bug!!)
         state = state.to(self.device)
         n = self.forward(state)
-        prob = F.softmax(self.l3(n), dim=softmax_dim)
+        prob = F.softmax(self.l3(n), dim=softmax_dim)  # TODO: check softmax dim (possible bug!!)
         dist = torch.distributions.Categorical(prob)
         if action is None:
             action = torch.multinomial(prob, 1)
@@ -103,6 +103,109 @@ class ConvBase(nn.Module):
         x = self.pool(F.relu(self.conv3(x)))
         x = torch.flatten(x, start_dim=1)
         return x
+    
+class ConvBaseMinigrid(nn.Module):
+    def __init__(self, n_channels=4):
+        super(ConvBaseMinigrid, self).__init__()
+        self.conv1 = nn.Conv2d(n_channels, 16, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        x = torch.flatten(x, start_dim=x.dim()-3)
+        return x
+    
+
+class MinigridActorNet(nn.Module):
+
+    def __init__(self, obs_dim, action_dim, cnn=False, device='cpu'):
+        super(MinigridActorNet, self).__init__()
+
+        self.hs = [512, 64]
+        self.device = device
+        self.cnn = cnn
+        self.obs_dim = torch.tensor(obs_dim)
+        if self.cnn:
+            self.conv_base = ConvBaseMinigrid(n_channels=4)
+            self.cnn_output_size = self.conv_base(torch.randn(1, *obs_dim)).shape[-1]
+            self.l1 = nn.Linear(self.cnn_output_size, self.hs[0])
+            print(f"CNN net (cnn output size: {self.cnn_output_size})")
+        else:
+            self.l1 = nn.Linear(self.obs_dim.prod().item(), self.hs[0])
+            print(f"Fully connected net (input size: {self.obs_dim})")
+        
+        self.l2 = nn.Linear(self.hs[0], self.hs[1])
+        self.l3 = nn.Linear(self.hs[1], action_dim)
+
+    def forward(self, state):
+        if self.cnn:
+            state = self.conv_base(state)
+        else:
+            state = state.flatten(start_dim=state.dim()-3)
+        n = torch.tanh(self.l1(state))
+        n = torch.tanh(self.l2(n))
+        return n
+    
+    def get_action(self, state, action=None, softmax_dim=-1):
+        n = self.forward(state)
+        prob = F.softmax(self.l3(n), dim=-1)
+        dist = torch.distributions.Categorical(prob)
+
+        # TODO: debug (frequency of prints)
+        print_prob = 0.000
+        noise_print = torch.rand(1).item() < print_prob
+        if noise_print and state.dim()==3: print(state[0,1:-1,1:-1], prob, state[3,0,0])
+
+        if action is None:
+            action = torch.multinomial(prob, 1)
+            if noise_print: print("action", action)
+        else:
+            action = action.to(self.device)
+            action = action.squeeze()
+        entropy = dist.entropy()
+        log_prob_action = dist.log_prob(action)
+        return action.detach(), log_prob_action, entropy
+
+    
+    def save(self, filename='actor.pth'):
+        torch.save(self, filename)
+
+
+class MinigridCriticNet(nn.Module):
+    def __init__(self, obs_dim, cnn=False, device='cpu'):
+        super(MinigridCriticNet, self).__init__()
+
+        self.hs = [512, 64]
+        self.device = device
+        self.cnn = cnn
+        self.obs_dim = torch.tensor(obs_dim)
+        
+        if self.cnn:
+            self.conv_base = ConvBaseMinigrid(n_channels=4)
+            self.cnn_output_size = self.conv_base(torch.randn(1, *obs_dim)).shape[-1]
+            self.l1 = nn.Linear(self.cnn_output_size, self.hs[0])
+        else:
+            self.l1 = nn.Linear(self.obs_dim.prod().item(), self.hs[0])
+        
+        self.l2 = nn.Linear(self.hs[0], self.hs[1])
+        self.l3 = nn.Linear(self.hs[1], 1)
+
+    def forward(self, state):
+        if self.cnn:
+            state = self.conv_base(state)
+        else:
+            state = state.flatten(start_dim=state.dim()-3)
+        n = torch.tanh(self.l1(state))
+        n = torch.tanh(self.l2(n))
+        n = self.l3(n)
+        return n
+    
+    def save(self, filename='critic.pth'):
+        torch.save(self, filename)
 
 class MiniHackActorNet(nn.Module):
 
@@ -113,7 +216,7 @@ class MiniHackActorNet(nn.Module):
         self.cnn = cnn
         if self.cnn:
             self.conv_base = ConvBase()
-            self.l1 = nn.Linear(64*2*9, 256)
+            self.l1 = nn.Linear(3040, 256)
         else:
             self.l1 = nn.Linear(21*79, 256)
         
@@ -131,7 +234,7 @@ class MiniHackActorNet(nn.Module):
     
     def get_action(self, state, action=None, softmax_dim=0):
         n = self.forward(state)
-        prob = F.softmax(self.l3(n), dim=softmax_dim)
+        prob = F.softmax(self.l3(n), dim=softmax_dim) # TODO: check softmax dim (possible bug!!)
         dist = torch.distributions.Categorical(prob)
         if action is None:
             action = torch.multinomial(prob, 1)
@@ -156,7 +259,7 @@ class MiniHackCriticNet(nn.Module):
         self.cnn = cnn
         if self.cnn:
             self.conv_base = ConvBase()
-            self.l1 = nn.Linear(64*2*9, 256)
+            self.l1 = nn.Linear(3040, 256)
         else:
             self.l1 = nn.Linear(21*79, 256)
         
@@ -175,4 +278,3 @@ class MiniHackCriticNet(nn.Module):
     
     def save(self, filename='critic.pth'):
         torch.save(self, filename)
-
