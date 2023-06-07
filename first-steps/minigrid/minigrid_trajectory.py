@@ -6,6 +6,18 @@ MAX_PATIENCE = 1000
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+def get_state_tensor(state):
+
+    image = torch.tensor(state['image'], dtype=torch.float32)
+    direction = state['direction']
+
+    image = image.permute(2,0,1)
+    direction_channel = torch.full_like(image[0], direction)
+    state_tensor = torch.cat((image, direction_channel.unsqueeze(0)), dim=0)
+
+    return state_tensor
+
+
 class TrajectoryCollector:
     def __init__(self, env, agent, discount_factor, trace_decay):
         self.env = env
@@ -18,8 +30,8 @@ class TrajectoryCollector:
 
     def collect_trajectories(self, timesteps_per_batch):
         trajectories = []
-        state = self.env.reset()
-        state_tensor = torch.cat([torch.tensor(state[key], dtype=torch.float32) for key in state.keys()])
+        state, _ = self.env.reset()
+        state_tensor = get_state_tensor(state)
         timesteps = 0
         rewards = 0
 
@@ -27,7 +39,8 @@ class TrajectoryCollector:
             state_tensor = state_tensor.to(device)
             action, log_prob_action, _ = self.agent.actor_net.get_action(state_tensor)
             value = self.agent.critic_net(state_tensor)
-            next_state, reward, done, _ = self.env.step(action.item())
+            next_state, reward, terminated, truncated, _ = self.env.step(action.item())
+            done = terminated or truncated
 
             trajectories.append({'state': state_tensor.unsqueeze(0), 
                                 'action': action.unsqueeze(0), 
@@ -40,11 +53,11 @@ class TrajectoryCollector:
             timesteps += 1
             rewards += reward
             state = next_state
-            state_tensor = torch.cat([torch.tensor(state[key], dtype=torch.float32) for key in state.keys()])
+            state_tensor = get_state_tensor(state)
 
             if done:
-                state = self.env.reset()
-                state_tensor = torch.cat([torch.tensor(state[key], dtype=torch.float32) for key in state.keys()])
+                state, _ = self.env.reset()
+                state_tensor = get_state_tensor(state)
 
             if timesteps > timesteps_per_batch + MAX_PATIENCE: break # avoid infinite loops
                 
@@ -80,6 +93,9 @@ class TrajectoryCollector:
                 "reward_history": self.reward_history, 
                 "length_history": self.length_history,
                 "episodes_done": episodes_done}
+        
+        #for key in batch:
+            #print(key, batch[key].shape)
 
         return batch, info
 
