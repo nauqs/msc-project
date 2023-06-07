@@ -21,6 +21,7 @@ parser.add_argument('--env_type', type=str, default='Empty', help='Environment t
 parser.add_argument('--env_size', type=str, default='5x5', help='Environment size')
 parser.add_argument('--conv_nets', type=bool, default=True, help='Use convolutional networks')
 parser.add_argument('--max_timesteps', type=int, default=100000, help='Maximum number of timesteps')
+parser.add_argument('--timestamp', type=str, default='0123-456789', help='Timestamp when the script is run')
 args = parser.parse_args()
 
 ### PPO CLIP HYPERPARAMS
@@ -46,7 +47,7 @@ ENV_NAME = f'MiniGrid-{ENV_STR}-v0'
 env = gym.make(ENV_NAME)
 env = FullyObsWrapper(env) # Make fully observable MDP
 
-timestamp = round(time.time())//100
+timestamp = args.timestamp
 
 print("Device is", device)
 
