@@ -63,14 +63,15 @@ class TrajectoryCollector:
                 
         # Compute rewards-to-go R and advantage estimates based on the current value function V
         with torch.no_grad():
-            reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]).to(device), torch.tensor([0.]).to(device)
+            reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
             for episode_step in trajectories[::-1]:
                 reward_to_go = episode_step['reward'] + self.discount_factor * reward_to_go
                 episode_step['reward_to_go'] = reward_to_go
-                TD_error = episode_step['reward'].to(device) + self.discount_factor * next_value - episode_step['value']
+                value = episode_step['value'].cpu()
+                TD_error = episode_step['reward'] + self.discount_factor * next_value - value
                 advantage = TD_error +  self.discount_factor * self.trace_decay * advantage
                 episode_step['advantage'] = advantage
-                next_value = episode_step['value']
+                next_value = value
                 if episode_step["done"]:
                     reward_to_go, next_value, advantage = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
 
