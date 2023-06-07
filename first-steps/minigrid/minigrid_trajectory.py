@@ -63,11 +63,11 @@ class TrajectoryCollector:
                 
         # Compute rewards-to-go R and advantage estimates based on the current value function V
         with torch.no_grad():
-            reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
+            reward_to_go, advantage, next_value = torch.tensor([0.]), torch.tensor([0.]).to(device), torch.tensor([0.]).to(device)
             for episode_step in trajectories[::-1]:
                 reward_to_go = episode_step['reward'] + self.discount_factor * reward_to_go
                 episode_step['reward_to_go'] = reward_to_go
-                TD_error = episode_step['reward'] + self.discount_factor * next_value - episode_step['value']
+                TD_error = episode_step['reward'].to(device) + self.discount_factor * next_value - episode_step['value']
                 advantage = TD_error +  self.discount_factor * self.trace_decay * advantage
                 episode_step['advantage'] = advantage
                 next_value = episode_step['value']
@@ -75,7 +75,7 @@ class TrajectoryCollector:
                     reward_to_go, next_value, advantage = torch.tensor([0.]), torch.tensor([0.]), torch.tensor([0.])
 
         # Batch trajectories
-        batch = {k: torch.cat([trajectory[k] for trajectory in trajectories], dim=0) for k in trajectories[0].keys()}
+        batch = {k: torch.cat([trajectory[k] for trajectory in trajectories], dim=0).to(device) for k in trajectories[0].keys()}
         batch['advantage'] = (batch['advantage'] - batch['advantage'].mean()) / (batch['advantage'].std() + 1e-8)
 
         episodes_done = float(sum([trajectory['done'].item() for trajectory in trajectories]))
