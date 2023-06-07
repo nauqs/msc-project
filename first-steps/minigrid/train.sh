@@ -1,6 +1,6 @@
 #$ -l tmem=16G
 #$ -l h_vmem=16G
-#$ -l h_rt=1:59:00
+#$ -l h_rt=4:00:00
 #$ -l gpu=true
 
 ### to exclude small gpus:
