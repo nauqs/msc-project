@@ -4,13 +4,10 @@ import time
 
 MAX_PATIENCE = 1000
 
-def get_state_tensor(state, flat=True):
-
+def get_state_tensor(state, flat=True): # TODO: use this in the code and adapt for new conv agents
     if flat:
         return torch.tensor(state['image'], dtype=torch.float32)
-
     else:
-
         image = torch.tensor(state['image'], dtype=torch.float32)
         direction = state['direction']
 
@@ -28,7 +25,6 @@ class TrajectoryCollector:
         self.args = args
         self.device = device
 
-        # ALGO Logic: Storage setup
         self.obs = torch.zeros((self.args.num_steps, self.args.num_envs) + envs.single_observation_space['image'].shape).to(device)
         self.actions = torch.zeros((self.args.num_steps, self.args.num_envs) + envs.single_action_space.shape).to(device)
         self.logprobs = torch.zeros((self.args.num_steps, self.args.num_envs)).to(device)
@@ -54,7 +50,6 @@ class TrajectoryCollector:
             self.actions[step] = action
             self.logprobs[step] = logprob
 
-            # execute env and log data.
             next_obs, reward, truncated, terminated, info = self.envs.step(action.cpu().numpy())
             next_obs = next_obs['image']
             done = truncated | terminated

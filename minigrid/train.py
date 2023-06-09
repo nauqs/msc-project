@@ -20,25 +20,17 @@ from ppo import PPO
 def parse_args():
     # fmt: off
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
+    parser.add_argument("--exp-name", type=str, default="",
         help="the name of this experiment")
     parser.add_argument("--seed", type=int, default=1,
         help="seed of the experiment")
-    parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="if toggled, `torch.backends.cudnn.deterministic=False`")
     parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="if toggled, cuda will be enabled by default")
-    parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="if toggled, this experiment will be tracked with Weights and Biases")
-    parser.add_argument("--wandb-project-name", type=str, default="cleanRL",
-        help="the wandb's project name")
-    parser.add_argument("--wandb-entity", type=str, default=None,
-        help="the entity (team) of wandb's project")
     parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to capture videos of the agent performances (check out `videos` folder)")
 
     # Algorithm specific arguments
-    parser.add_argument("--env-id", type=str, default="MiniGrid-Empty-5x5-v0",
+    parser.add_argument("--env-id", type=str, default="MiniGrid-Empty-Random-6x6-v0",
         help="the id of the environment")
     parser.add_argument("--total-timesteps", type=int, default=500000,
         help="total timesteps of the experiments")
@@ -89,26 +81,39 @@ def make_env(env_id, seed, idx, capture_video, run_name):
 
     return thunk
 
+args = parse_args()
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-args = parse_args()
 timestamp = datetime.now().strftime("%m%d_%H%M%S")
-run_name = timestamp
+if args.exp_name == "": run_name = timestamp
+else: run_name = args.exp_name
 
 num_updates = args.total_timesteps // args.batch_size
 
- # env setup
+# Set up vectorised environments
 envs = gym.vector.SyncVectorEnv(
-    [make_env(args.env_id, args.seed + i, i, args.capture_video, run_name) for i in range(args.num_envs)]
+    [make_env(args.env_id, args.seed, i, args.capture_video, run_name) for i in range(args.num_envs)]
 )
 
-agent = BasicAgent(envs).to(device)
+# Define agent
+agent = BasicAgent(envs).to(device) # TODO: update agent
+
+# Define storage and ppo objects
 storage = TrajectoryCollector(envs, agent, args, device)
 ppo = PPO(agent, args, device)
 
-for update in range(1, num_updates + 1):
+# TODO: create trained_models and figs folders
 
-    print("Update", update)
+# Run training algorithm
+for update in range(1, num_updates+1):
 
+    # Collect trajectories
+    # TODO: return info (total rewards, global timestep...)
     batch = storage.collect_trajectories()
+
+    # Update PPO agents (actor and critic)
+    # TODO: return info (actor/critic loss, KL...)
     ppo.update_ppo_agent(batch)
+
+    # TODO: plot and/or print info

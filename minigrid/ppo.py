@@ -1,8 +1,6 @@
-import time
 import torch
 import torch.nn as nn
 import numpy as np
-import random
 
 class PPO(nn.Module):
 
@@ -65,7 +63,11 @@ class PPO(nn.Module):
                 loss.backward()
                 nn.utils.clip_grad_norm_(self.agent.parameters(), self.args.max_grad_norm)
                 self.optimizer.step()
-
+            
+            # Check target KL
             if self.args.target_kl is not None:
                 if approx_kl > self.args.target_kl:
                     break
+        
+        # TODO: pass save path
+        self.agent.save()

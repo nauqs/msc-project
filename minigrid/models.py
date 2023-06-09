@@ -37,4 +37,9 @@ class BasicAgent(nn.Module):
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(x)
+    
+    def save(self, file_path="trained-models/actor.pth"):
+        torch.save(self, file_path)
 
+
+ # TODO: add conv agents
