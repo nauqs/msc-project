@@ -36,7 +36,7 @@ def parse_args():
 
 
     # Algorithm specific arguments
-    parser.add_argument("--env-id", type=str, default=f'MiniGrid-Empty-16x16-v0',
+    parser.add_argument("--env-id", type=str, default=f'MiniGrid-Empty-8x8-v0',
         help="the id of the environment")
     parser.add_argument("--total-timesteps", type=int, default=500000,
         help="total timesteps of the experiments")
@@ -44,7 +44,7 @@ def parse_args():
         help="the learning rate of the optimizer")
     parser.add_argument("--num-envs", type=int, default=4,
         help="the number of parallel game environments")
-    parser.add_argument("--num-steps", type=int, default=128,
+    parser.add_argument("--num-steps", type=int, default=256,
         help="the number of steps to run in each environment per policy rollout")
     parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="Toggle learning rate annealing for policy and value networks")
@@ -136,3 +136,8 @@ for update in range(1, num_updates+1):
             smooth=True,
             title=f'{args.env_id}',
             save_path=f'figs/ppo_{args.env_id}_{run_name}.png')
+        
+    if args.verbose:
+        print(f"Timestep: {stats['initial_timestep']}")
+        print(f"Mean episodic return: {stats['episode_returns'].mean()}")
+        print(f"Mean episodic length: {stats['episode_lengths'].mean()}")

@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 def get_state_tensor(state, cnn=True): # TODO: use this in the code and adapt for new conv agents
     if cnn:
         image = torch.tensor(state['image'], dtype=torch.float32)
+        image_size = image.shape[-2]
         direction = torch.from_numpy(state['direction'])
         image = image.permute(0,3,1,2)
-        direction_channel = direction.reshape((direction.shape[0], 1, 1, 1)).expand((-1, 1, 5, 5))
+        direction_channel = direction.reshape((direction.shape[0], 1, 1, 1)).expand((-1, 1, image_size, image_size))
         state_tensor = torch.cat((image, direction_channel), dim=1)
         return state_tensor
     else:
