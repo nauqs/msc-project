@@ -23,7 +23,7 @@ class PPO(nn.Module):
                 end = start + self.args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = self.agent.get_action_and_value(batch["obs"][mb_inds].flatten(start_dim=1), batch["actions"].long()[mb_inds])
+                _, newlogprob, entropy, newvalue = self.agent.get_action_and_value(batch["obs"][mb_inds], batch["actions"].long()[mb_inds])
                 logratio = newlogprob - batch["log_probs"][mb_inds]
                 ratio = logratio.exp()
 
