@@ -12,7 +12,7 @@ class PPO(nn.Module):
         self.args = args
         self.optimizer = torch.optim.Adam(agent.parameters(), lr=self.args.learning_rate, eps=1e-5)
 
-    def update_ppo_agent(self, batch):
+    def update_ppo_agent(self, batch, save_path="trained-models/actor.pth"):
 
         # Optimizing the policy and value network
         b_inds = np.arange(self.args.batch_size)
@@ -69,5 +69,4 @@ class PPO(nn.Module):
                 if approx_kl > self.args.target_kl:
                     break
         
-        # TODO: pass save path
-        self.agent.save()
+        self.agent.save(file_path=save_path)
