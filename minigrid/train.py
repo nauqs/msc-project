@@ -38,7 +38,7 @@ def parse_args():
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default=f'MiniGrid-Empty-8x8-v0',
         help="the id of the environment")
-    parser.add_argument("--total-timesteps", type=int, default=500000,
+    parser.add_argument("--total-timesteps", type=int, default=1000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
         help="the learning rate of the optimizer")
@@ -110,8 +110,8 @@ agent = MiniGridAgent(obs_dim, envs.single_action_space.n, n_channels=4).to(devi
 storage = TrajectoryCollector(envs, obs_dim, agent, args, device)
 ppo = PPO(agent, args, device)
 
-os.makedirs(f'trained-models', exist_ok=True)
-os.makedirs(f'figs', exist_ok=True)
+os.makedirs(f'trained-models/{args.env_id}', exist_ok=True)
+os.makedirs(f'figs/{args.env_id}', exist_ok=True)
 
 timestep_history, return_history, length_history = [], [], []
 
@@ -129,15 +129,17 @@ for update in range(1, num_updates+1):
     # Update PPO agents (actor and critic)
     # TODO: return info (actor/critic loss, KL...)
     # TODO: lr annealing / schedule?
-    ppo.update_ppo_agent(batch)
+    ppo.update_ppo_agent(batch, save_path=f'trained-models/{args.env_id}/actor.pth')
 
     if args.plot:
         plot_logs(timestep_history, return_history, length_history, update,
             smooth=True,
             title=f'{args.env_id}',
-            save_path=f'figs/ppo_{args.env_id}_{run_name}.png')
+            save_path=f'figs/{args.env_id}/ppo_{args.env_id}_{run_name}.png')
         
     if args.verbose:
         print(f"Timestep: {stats['initial_timestep']}")
-        print(f"Mean episodic return: {stats['episode_returns'].mean()}")
-        print(f"Mean episodic length: {stats['episode_lengths'].mean()}")
+        if len(stats['episode_returns'])>0:
+            # print stats with mean and std and 3 decimals
+            print(f"Episodic return: {stats['episode_returns'].mean():.3f}±{stats['episode_returns'].std():.3f}")
+            print(f"Episodic length: {stats['episode_lengths'].mean():.3f}±{stats['episode_lengths'].std():.3f}")
