@@ -24,7 +24,7 @@ class TrajectoryCollector:
     def collect_trajectories(self):
         
         stats = {'initial_timestep': self.global_step}
-        episode_returns, episode_lengths = [], []
+        episode_returns, episode_lengths, episode_timesteps = [], [], []
         state = self.envs.reset()[0]
         next_obs = get_state_tensor(state).to(self.device)
         next_done = torch.zeros(self.args.num_envs).to(self.device)
@@ -54,6 +54,7 @@ class TrajectoryCollector:
                     if env_final_info is not None:
                         episode_returns.append(env_final_info['episode']['r'].item())
                         episode_lengths.append(env_final_info['episode']['l'].item())
+                        episode_timesteps.append(self.global_step)
 
         with torch.no_grad():
             next_value = self.agent.get_value(next_obs).reshape(1, -1)
@@ -79,6 +80,7 @@ class TrajectoryCollector:
         
         stats['episode_returns'] = np.array(episode_returns)
         stats['episode_lengths'] = np.array(episode_lengths)
+        stats['episode_timesteps'] = np.array(episode_timesteps)
         stats['final_timestep'] = self.global_step
         
         return batch, stats

@@ -17,6 +17,8 @@ def get_state_tensor(state, cnn=True): # TODO: use this in the code and adapt fo
 def plot_logs(timesteps, rewards, episode_lengths, step, smooth=True, title="ppo", save_path="ppo.png"):
     # plot both rewards and episode lengths in same figure, but different scales
     alpha_non_smoothed, n_smooth = 1, 5
+    rewards, rewards_std = np.array(rewards).T
+    episode_lengths, episode_lengths_std = np.array(episode_lengths).T
     smooth = smooth and len(rewards) > n_smooth
     if smooth:
         conv_smooth = np.ones((n_smooth,))/n_smooth
@@ -25,17 +27,20 @@ def plot_logs(timesteps, rewards, episode_lengths, step, smooth=True, title="ppo
         alpha_non_smoothed = 0.2
     fig, ax1 = plt.subplots()
     ax1.plot(timesteps, rewards, 'b-', alpha=alpha_non_smoothed)
+    #ax1.fill_between(timesteps, rewards-rewards_std, rewards+rewards_std, color='b', alpha=0.2)
     ax1.set_xlabel('Timestep')
     ax1.set_ylabel('Average reward', color='b')
     ax1.tick_params('y', colors='b')
     ax2 = ax1.twinx()
     ax2.plot(timesteps, episode_lengths, 'r-', alpha=alpha_non_smoothed)
+    #ax2.fill_between(timesteps, episode_lengths-episode_lengths_std, episode_lengths+episode_lengths_std, color='r', alpha=0.2)
     ax2.set_ylabel('Average episode length', color='r')
     ax2.tick_params('y', colors='r')
     if smooth:
         ax1.plot(timesteps[n_smooth-1:], smoothed_rewards, 'b-')
         ax2.plot(timesteps[n_smooth-1:], smoothed_episode_lengths, 'r-')
-    plt.xlim(0, timesteps[-1]*1.05)
+    if len(timesteps) > 1:
+        plt.xlim(0, timesteps[-1]*1.05)
     plt.title(title)
     plt.savefig(save_path, dpi=200)
     plt.close()

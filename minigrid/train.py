@@ -7,6 +7,7 @@ import random
 from datetime import datetime
 from minigrid.wrappers import FullyObsWrapper
 from distutils.util import strtobool
+import wandb
 
 import numpy as np
 import torch
@@ -33,6 +34,8 @@ def parse_args():
         help="whether to print metrics and training logs")
     parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to capture videos of the agent performances (check out `videos` folder)")
+    parser.add_argument("--wandb", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+        help="whether to use wandb to log metrics")
 
 
     # Algorithm specific arguments
@@ -113,6 +116,13 @@ ppo = PPO(agent, args, device)
 os.makedirs(f'trained-models/{args.env_id}', exist_ok=True)
 os.makedirs(f'figs/{args.env_id}', exist_ok=True)
 
+if args.wandb:
+    env_type = args.env_id.split('-')[1]
+    wandb.init(project="msc-project", 
+               name=run_name, 
+               config=args)
+    wandb.config.update({"env_type": env_type})
+
 timestep_history, return_history, length_history = [], [], []
 
 # Run training algorithm
@@ -121,25 +131,46 @@ for update in range(1, num_updates+1):
     # Collect trajectories
     batch, stats = storage.collect_trajectories()
 
-    # TODO: add std for error margins
-    timestep_history.append(stats['initial_timestep'])
-    return_history.append(stats['episode_returns'].mean())
-    length_history.append(stats['episode_lengths'].mean())
-
     # Update PPO agents (actor and critic)
     # TODO: return info (actor/critic loss, KL...)
     # TODO: lr annealing / schedule?
     ppo.update_ppo_agent(batch, save_path=f'trained-models/{args.env_id}/actor.pth')
 
-    if args.plot:
-        plot_logs(timestep_history, return_history, length_history, update,
-            smooth=True,
-            title=f'{args.env_id}',
-            save_path=f'figs/{args.env_id}/ppo_{args.env_id}_{run_name}.png')
+    # Unifinished episodes
+    if len(stats['episode_returns'])==0: 
+        stats['episode_returns'] = np.array([0])
         
+    # Print stats
     if args.verbose:
         print(f"Timestep: {stats['initial_timestep']}")
         if len(stats['episode_returns'])>0:
             # print stats with mean and std and 3 decimals
             print(f"Episodic return: {stats['episode_returns'].mean():.3f}±{stats['episode_returns'].std():.3f}")
             print(f"Episodic length: {stats['episode_lengths'].mean():.3f}±{stats['episode_lengths'].std():.3f}")
+
+    # Plot stats
+    if args.plot:
+
+        timestep_history.append(stats['initial_timestep'])
+        return_history.append((stats['episode_returns'].mean(), stats['episode_returns'].std()))
+        length_history.append((stats['episode_lengths'].mean(), stats['episode_lengths'].std()))
+
+        plot_logs(timestep_history, return_history, length_history, update,
+            smooth=True,
+            title=f'{args.env_id}',
+            save_path=f'figs/{args.env_id}/ppo_{args.env_id}_{run_name}.png')
+        
+    # Log metrics to wandb
+    if args.wandb:
+        wandb.log({
+            "average_return": stats['episode_returns'].mean(),
+            "average_length": stats['episode_lengths'].mean(),
+            "timestep": stats['initial_timestep'],
+        })
+        for i in range(len(stats['episode_returns'])):
+            wandb.log({
+                "episode_timestep": stats['episode_timesteps'][i],
+                "episode_return": stats['episode_returns'][i],
+                "episode_length": stats['episode_lengths'][i],
+            })
+
