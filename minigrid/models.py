@@ -52,7 +52,7 @@ class ConvBase(nn.Module):
         self.pool = nn.MaxPool2d(2, 2)
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))
+        x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = torch.flatten(x, start_dim=x.dim()-3)
         return x
@@ -65,22 +65,23 @@ class MiniGridAgent(nn.Module):
         # Convolutional base
         self.conv = ConvBase(n_channels=n_channels)
         self.conv_output_size = self.conv(torch.randn(1, *obs_dim)).shape[-1]
+        print("conv output size:", self.conv_output_size)
 
         # Critic head
         self.critic = nn.Sequential(
             layer_init(nn.Linear(self.conv_output_size, 256)),
-            nn.Tanh(),
+            nn.ReLU(),
             layer_init(nn.Linear(256, 64)),
-            nn.Tanh(),
+            nn.ReLU(),
             layer_init(nn.Linear(64, 1), std=1.0),
         )
 
         # Actor head
         self.actor = nn.Sequential(
             layer_init(nn.Linear(self.conv_output_size, 256)),
-            nn.Tanh(),
+            nn.ReLU(),
             layer_init(nn.Linear(256, 64)),
-            nn.Tanh(),
+            nn.ReLU(),
             layer_init(nn.Linear(64, action_dim), std=0.01),
         )
 

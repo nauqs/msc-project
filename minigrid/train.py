@@ -41,6 +41,8 @@ def parse_args():
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default=f'MiniGrid-Empty-8x8-v0',
         help="the id of the environment")
+    parser.add_argument("--fully-obs", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
+        help="whether to use the fully observable wrapper")
     parser.add_argument("--total-timesteps", type=int, default=1000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
@@ -79,10 +81,10 @@ def parse_args():
     # fmt: on
     return args
 
-def make_env(env_id, seed, idx, capture_video, run_name):
+def make_env(env_id, fully_obs, seed, idx, capture_video, run_name):
     def thunk():
         env = gym.make(env_id)
-        env = FullyObsWrapper(env)
+        if fully_obs: env = FullyObsWrapper(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
     return thunk
@@ -98,9 +100,9 @@ else: run_name = args.exp_name
 num_updates = args.total_timesteps // args.batch_size
 
 # Set up vectorised environments
-print(args.env_id, args.seed, 0, args.capture_video, run_name) 
+print(args)
 envs = gym.vector.SyncVectorEnv(
-    [make_env(args.env_id, args.seed+i, i, args.capture_video, run_name) for i in range(args.num_envs)]
+    [make_env(args.env_id, args.fully_obs, args.seed+i, i, args.capture_video, run_name) for i in range(args.num_envs)]
 )
 
 # Get dimension of a single transformed observation
