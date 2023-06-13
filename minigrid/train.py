@@ -142,6 +142,10 @@ for update in range(1, num_updates+1):
     # Unifinished episodes
     if len(stats['episode_returns'])==0: 
         stats['episode_returns'] = np.array([0])
+    if len(stats['episode_lengths'])==0:
+        stats['episode_lengths'] = np.array([args.num_steps])
+    if len(stats['episode_timesteps'])==0:
+        stats['episode_lengths'] = np.array([stats['initial_timestep']])
         
     # Print stats
     if args.verbose:
