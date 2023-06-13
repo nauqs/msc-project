@@ -121,6 +121,7 @@ os.makedirs(f'figs/{args.env_id}', exist_ok=True)
 if args.wandb:
     env_type = args.env_id.split('-')[1]
     wandb.init(project="msc-project", 
+               entity="nauqs",
                name=run_name, 
                config=args)
     wandb.config.update({"env_type": env_type})
