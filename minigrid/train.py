@@ -145,7 +145,7 @@ for update in range(1, num_updates+1):
     if len(stats['episode_lengths'])==0:
         stats['episode_lengths'] = np.array([args.num_steps])
     if len(stats['episode_timesteps'])==0:
-        stats['episode_lengths'] = np.array([stats['initial_timestep']])
+        stats['episode_timesteps'] = np.array([stats['initial_timestep']])
         
     # Print stats
     if args.verbose:
