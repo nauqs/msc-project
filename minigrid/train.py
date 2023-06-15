@@ -81,10 +81,12 @@ def parse_args():
     # fmt: on
     return args
 
-def make_env(env_id, fully_obs, num_steps, seed, idx, capture_video, run_name):
+def make_env(env_id, fully_obs, seed, idx, capture_video, run_name):
     def thunk():
-        env = gym.make(env_id)
-        env.max_steps = max(env.max_steps, num_steps)
+        if env_id == "MiniGrid-FourRooms-v0":
+            env = gym.make(env_id, max_steps=1024)
+        else:
+            env = gym.make(env_id)
         if fully_obs: env = FullyObsWrapper(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
@@ -103,7 +105,7 @@ num_updates = args.total_timesteps // args.batch_size
 # Set up vectorised environments
 print(args)
 envs = gym.vector.SyncVectorEnv(
-    [make_env(args.env_id, args.fully_obs, args.num_steps, args.seed+i, i, args.capture_video, run_name) for i in range(args.num_envs)]
+    [make_env(args.env_id, args.fully_obs, args.seed+i, i, args.capture_video, run_name) for i in range(args.num_envs)]
 )
 
 # Get dimension of a single transformed observation
