@@ -3,7 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 import gymnasium as gym
 
-def get_state_tensor(state, cnn=True): # TODO: use this in the code and adapt for new conv agents
+def get_state_tensor(state, cnn=True):
     if cnn:
         image = torch.tensor(state['image'], dtype=torch.float32)
         image_size = image.shape[-2]
