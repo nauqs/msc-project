@@ -1,8 +1,9 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+import gymnasium as gym
 
-def get_state_tensor(state, cnn=True): # TODO: use this in the code and adapt for new conv agents
+def get_state_tensor(state, cnn=True):
     if cnn:
         image = torch.tensor(state['image'], dtype=torch.float32)
         image_size = image.shape[-2]
@@ -44,3 +45,30 @@ def plot_logs(timesteps, rewards, episode_lengths, step, smooth=True, title="ppo
     plt.title(title)
     plt.savefig(save_path, dpi=200)
     plt.close()
+    
+
+class ActionCostWrapper(gym.Wrapper):
+    """
+    Wrapper which adds a cost to actions and time.
+    """
+    
+    def __init__(self, env, action_cost=0.01, time_cost=0.001):
+        """A wrapper that adds a cost to actions and time.
+
+        Args:
+            env: The environment to apply the wrapper
+            action_cost: The cost of an action
+            time_cost: The cost of time
+        """
+        super().__init__(env)
+        self.action_cost = action_cost
+        self.time_cost = time_cost
+
+    def step(self, action):
+        """Steps through the environment with `action`."""
+        obs, reward, terminated, truncated, info = self.env.step(action)
+
+        # TODO: split into action cost and time cost
+        reward -= self.action_cost
+
+        return obs, reward, terminated, truncated, info
