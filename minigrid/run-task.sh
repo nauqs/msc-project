@@ -19,8 +19,12 @@ else
     cuda_option="--cuda false"
 fi
 
+# Create the experiment name
+timestamp=$(date "+%m%d-%H%M%S")
+exp_name="${timestamp}_${TASK_ID}"
+
 # Execute the command
-echo "Executing task with parameters: env_id=$env_id, fully_obs=$fully_obs, wandb=$wandb, total_timesteps=$total_timesteps, num_envs=$num_envs, num_steps=$num_steps, ent_coef=$ent_coef, $cuda_option"
+echo "Executing task with parameters: env_id=$env_id, fully_obs=$fully_obs, wandb=$wandb, total_timesteps=$total_timesteps, num_envs=$num_envs, num_steps=$num_steps, ent_coef=$ent_coef, exp_name=$exp_name, $cuda_option"
 cd /cluster/project2/tithonus/msc-project/minigrid
 free -g
-/cluster/project2/tithonus/miniconda3/bin/conda run -n minigrid python -u train.py --env-id $env_id --fully-obs $fully_obs --wandb $wandb --total-timesteps $total_timesteps --num-envs $num_envs --num-steps $num_steps --ent-coef $ent_coef $cuda_option
+/cluster/project2/tithonus/miniconda3/bin/conda run -n minigrid python -u train.py --env-id $env_id --fully-obs $fully_obs --wandb $wandb --total-timesteps $total_timesteps --num-envs $num_envs --num-steps $num_steps --ent-coef $ent_coef --exp-name $exp_name $cuda_option
