@@ -28,7 +28,7 @@ def parse_args():
         help="seed of the experiment")
     parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="if toggled, cuda will be enabled by default")
-    parser.add_argument("--plot", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
+    parser.add_argument("--plot", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to plot metrics and save")
     parser.add_argument("--verbose", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="whether to print metrics and training logs")
@@ -133,7 +133,7 @@ os.makedirs(f'figs/{args.env_id}', exist_ok=True)
 
 if args.wandb:
     env_type = args.env_id.split('-')[1]
-    wandb.init(project="msc-project", 
+    wandb.init(project="action-cost-experiments", 
                entity="nauqs",
                name=run_name, 
                config=args)
@@ -150,7 +150,7 @@ for update in range(1, num_updates+1):
     # Update PPO agents (actor and critic)
     # TODO: return info (actor/critic loss, KL...)
     # TODO: lr annealing / schedule?
-    ppo.update_ppo_agent(batch, save_path=f'trained-models/{args.env_id}/actor.pth')
+    ppo.update_ppo_agent(batch, save_path=f'trained-models/{args.env_id}/actor_{run_name}.pth')
 
     # Unifinished episodes
     if len(stats['episode_returns'])==0: 
