@@ -17,7 +17,7 @@ import torch.optim as optim
 from models import MiniGridAgent
 from storage import TrajectoryCollector
 from ppo import PPO
-from utils import plot_logs, get_state_tensor
+from utils import plot_logs, get_state_tensor, ActionCostWrapper
 
 def parse_args():
     # fmt: off
@@ -41,8 +41,10 @@ def parse_args():
     # Algorithm specific arguments
     parser.add_argument("--env-id", type=str, default=f'MiniGrid-Empty-8x8-v0',
         help="the id of the environment")
-    parser.add_argument("--fully-obs", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
+    parser.add_argument("--fully-obs", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to use the fully observable wrapper")
+    parser.add_argument("--action-cost", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+        help="whether to use the action cost wrapper")
     parser.add_argument("--total-timesteps", type=int, default=1000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
@@ -81,13 +83,14 @@ def parse_args():
     # fmt: on
     return args
 
-def make_env(env_id, fully_obs, seed, idx, capture_video, run_name):
+def make_env(env_id, fully_obs, action_cost, seed, idx, capture_video, run_name):
     def thunk():
         if env_id == "MiniGrid-FourRooms-v0":
             env = gym.make(env_id, max_steps=1024)
         else:
             env = gym.make(env_id)
         if fully_obs: env = FullyObsWrapper(env)
+        if action_cost: env = ActionCostWrapper(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         return env
     return thunk
@@ -105,7 +108,14 @@ num_updates = args.total_timesteps // args.batch_size
 # Set up vectorised environments
 print(args)
 envs = gym.vector.SyncVectorEnv(
-    [make_env(args.env_id, args.fully_obs, args.seed+i, i, args.capture_video, run_name) for i in range(args.num_envs)]
+    [make_env(args.env_id, 
+              args.fully_obs, 
+              args.action_cost,
+              args.seed+i, 
+              i, 
+              args.capture_video, 
+              run_name)
+            for i in range(args.num_envs)]
 )
 
 # Get dimension of a single transformed observation
