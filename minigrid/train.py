@@ -5,7 +5,7 @@ import os
 import argparse
 import random
 from datetime import datetime
-from minigrid.wrappers import FullyObsWrapper
+from minigrid.wrappers import FullyObsWrapper, ReseedWrapper
 from distutils.util import strtobool
 import wandb
 
@@ -92,6 +92,9 @@ def make_env(env_id, fully_obs, action_cost, seed, idx, capture_video, run_name)
         if fully_obs: env = FullyObsWrapper(env)
         if action_cost: env = ActionCostWrapper(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
+        env = ReseedWrapper(env, 
+                            seeds=list(range(100000)), # 100k different seeds for env.reset()
+                            seed_idx=seed)
         return env
     return thunk
 
@@ -117,6 +120,15 @@ envs = gym.vector.SyncVectorEnv(
               run_name)
             for i in range(args.num_envs)]
 )
+
+# Set seeds for reproducibility
+torch.manual_seed(args.seed)
+np.random.seed(args.seed)
+random.seed(args.seed)
+if args.cuda and torch.cuda.is_available():
+    torch.cuda.manual_seed(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 # Get dimension of a single transformed observation
 obs_dim = get_state_tensor(envs.reset()[0])[0].shape
