@@ -17,8 +17,8 @@ import torch.optim as optim
 from models import MiniGridAgent
 from storage import TrajectoryCollector
 from ppo import PPO
-from utils import plot_logs, get_state_tensor, TimeCostWrapper, BoxesWrapper
-from customenvs import *
+from utils import plot_logs, get_state_tensor, TimeCostWrapper
+from customenvs import SimpleBoxesEnv, MazeBoxesEnv
 
 def parse_args():
     # fmt: off
@@ -89,7 +89,7 @@ def make_env(env_id, fully_obs, action_cost, seed, idx, capture_video, run_name)
         if env_id == "MiniGrid-FourRooms-v0":
             env = gym.make(env_id, max_steps=1024)
         if env_id == "Boxes":
-            env = SimpleEnv(render_mode="human")
+            env = SimpleBoxesEnv()
         else:
             env = gym.make(env_id)
         # get env max steps
