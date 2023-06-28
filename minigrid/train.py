@@ -17,7 +17,8 @@ import torch.optim as optim
 from models import MiniGridAgent
 from storage import TrajectoryCollector
 from ppo import PPO
-from utils import plot_logs, get_state_tensor, ActionCostWrapper
+from utils import plot_logs, get_state_tensor, TimeCostWrapper, BoxesWrapper
+from customenvs import *
 
 def parse_args():
     # fmt: off
@@ -87,10 +88,13 @@ def make_env(env_id, fully_obs, action_cost, seed, idx, capture_video, run_name)
     def thunk():
         if env_id == "MiniGrid-FourRooms-v0":
             env = gym.make(env_id, max_steps=1024)
+        if env_id == "Boxes":
+            env = SimpleEnv(render_mode="human")
         else:
             env = gym.make(env_id)
+        # get env max steps
         if fully_obs: env = FullyObsWrapper(env)
-        if action_cost: env = ActionCostWrapper(env)
+        if action_cost: env = TimeCostWrapper(env, time_cost=-1./env.max_steps, action_cost=0)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = ReseedWrapper(env, 
                             seeds=list(range(100000)), # 100k different seeds for env.reset()
