@@ -100,8 +100,8 @@ def make_env(env_id, fully_obs, time_cost, action_cost, seed, idx, capture_video
         if fully_obs: env = FullyObsWrapper(env)
         if action_cost or time_cost: 
             if env_id in ["SimpleBoxes", "MazeBoxes"]:
-                time_cost_value = 10./env.max_steps if time_cost else 0
-                action_cost_value = 10./env.max_steps if action_cost else 0
+                time_cost_value = 1./env.max_steps if time_cost else 0
+                action_cost_value = 1./env.max_steps if action_cost else 0
                 env = TimeCostWrapper(env, time_cost=time_cost_value, 
                                     action_cost=action_cost_value,
                                     noops_actions=[4,6])
