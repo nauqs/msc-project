@@ -48,11 +48,16 @@ class CustomBox(WorldObj):
         # Outline
         fill_coords(img, point_in_rect(0.12, 0.88, 0.32, 0.88), c)
         fill_coords(img, point_in_rect(0.18, 0.82, 0.38, 0.82), (0, 0, 0))
+
+        if self.state == 0:
+            fill_coords(img, point_in_circle(0.5, 0.6, 0.1), c)
+            return
             
         # draw open cover if half-open
         if self.state == 1:
             fill_coords(img, point_in_rect(0.18, 0.82, 0.32, 0.82), (0, 0, 0))
             fill_coords(img, point_in_line(0.17, 0.34, 0.85, 0.14, 0.03), c)
+            fill_coords(img, point_in_circle(0.5, 0.6, 0.1), c)
             return
 
         # remove cover if open
