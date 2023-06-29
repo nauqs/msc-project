@@ -85,7 +85,7 @@ class SimpleBoxesEnv(MiniGridEnv):
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
-        close_prob=0.05,
+        close_prob=0.2,
         **kwargs,
     ):
         self.agent_start_pos = agent_start_pos
@@ -187,7 +187,7 @@ class MazeBoxesEnv(MiniGridEnv):
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
-        close_prob=0.02,
+        close_prob=0.1,
         **kwargs,
     ):
         self.agent_start_pos = agent_start_pos
