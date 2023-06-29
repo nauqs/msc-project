@@ -85,7 +85,7 @@ class SimpleBoxesEnv(MiniGridEnv):
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
-        close_prob=0.1,
+        close_prob=0.05,
         **kwargs,
     ):
         self.agent_start_pos = agent_start_pos
@@ -95,7 +95,7 @@ class SimpleBoxesEnv(MiniGridEnv):
         self.eat_count = 0
 
         if max_steps is None:
-            max_steps = 128
+            max_steps = 256
 
         super().__init__(
             mission_space=mission_space,
@@ -187,7 +187,7 @@ class MazeBoxesEnv(MiniGridEnv):
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
-        close_prob=0.05,
+        close_prob=0.02,
         **kwargs,
     ):
         self.agent_start_pos = agent_start_pos
@@ -197,7 +197,7 @@ class MazeBoxesEnv(MiniGridEnv):
         self.eat_count = 0
 
         if max_steps is None:
-            max_steps = 256
+            max_steps = 512
 
         super().__init__(
             mission_space=mission_space,

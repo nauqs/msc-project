@@ -99,9 +99,17 @@ def make_env(env_id, fully_obs, time_cost, action_cost, seed, idx, capture_video
         # get env max steps
         if fully_obs: env = FullyObsWrapper(env)
         if action_cost or time_cost: 
-            time_cost_value = 0.5/env.max_steps if time_cost else 0
-            action_cost_value = 0.5/env.max_steps if action_cost else 0
-            env = TimeCostWrapper(env, time_cost=time_cost_value, action_cost=action_cost_value)
+            if env_id in ["SimpleBoxes", "MazeBoxes"]:
+                time_cost_value = 10./env.max_steps if time_cost else 0
+                action_cost_value = 10./env.max_steps if action_cost else 0
+                env = TimeCostWrapper(env, time_cost=time_cost_value, 
+                                    action_cost=action_cost_value,
+                                    noops_actions=[4,6])
+            else:
+                time_cost_value = 0.5/env.max_steps if time_cost else 0
+                action_cost_value = 0.5/env.max_steps if action_cost else 0
+                env = TimeCostWrapper(env, time_cost=time_cost_value, 
+                                    action_cost=action_cost_value) # TO DO: add noops_actions
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = ReseedWrapper(env, 
                             seeds=list(range(100000)), # 100k different seeds for env.reset()
