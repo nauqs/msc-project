@@ -17,7 +17,8 @@ import torch.optim as optim
 from models import MiniGridAgent
 from storage import TrajectoryCollector
 from ppo import PPO
-from utils import plot_logs, get_state_tensor, ActionCostWrapper
+from utils import plot_logs, get_state_tensor, TimeCostWrapper
+from customenvs import SimpleBoxesEnv, MazeBoxesEnv
 
 def parse_args():
     # fmt: off
@@ -49,7 +50,7 @@ def parse_args():
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
         help="the learning rate of the optimizer")
-    parser.add_argument("--num-envs", type=int, default=4,
+    parser.add_argument("--num-envs", type=int, default=16,
         help="the number of parallel game environments")
     parser.add_argument("--num-steps", type=int, default=256,
         help="the number of steps to run in each environment per policy rollout")
@@ -87,10 +88,15 @@ def make_env(env_id, fully_obs, action_cost, seed, idx, capture_video, run_name)
     def thunk():
         if env_id == "MiniGrid-FourRooms-v0":
             env = gym.make(env_id, max_steps=1024)
+        elif env_id == "SimpleBoxes":
+            env = SimpleBoxesEnv()
+        elif env_id == "MazeBoxes":
+            env = MazeBoxesEnv()
         else:
             env = gym.make(env_id)
+        # get env max steps
         if fully_obs: env = FullyObsWrapper(env)
-        if action_cost: env = ActionCostWrapper(env)
+        if action_cost: env = TimeCostWrapper(env, time_cost=1./env.max_steps, action_cost=0)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = ReseedWrapper(env, 
                             seeds=list(range(100000)), # 100k different seeds for env.reset()
@@ -137,15 +143,19 @@ obs_dim = get_state_tensor(envs.reset()[0])[0].shape
 agent = MiniGridAgent(obs_dim, envs.single_action_space.n, n_channels=4).to(device)
 
 # Define storage and ppo objects
-storage = TrajectoryCollector(envs, obs_dim, agent, args, device)
+is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes"]
+storage = TrajectoryCollector(envs, obs_dim, agent, args, device, is_boxes_env=is_boxes_env)
 ppo = PPO(agent, args, device)
 
 os.makedirs(f'trained-models/{args.env_id}', exist_ok=True)
 os.makedirs(f'figs/{args.env_id}', exist_ok=True)
 
 if args.wandb:
-    env_type = args.env_id.split('-')[1]
-    wandb.init(project="action-cost-experiments", 
+    if is_boxes_env: 
+        env_type = "Boxes"
+    else:
+        env_type = args.env_id.split('-')[1]
+    wandb.init(project="foodboxes-experiments", 
                entity="nauqs",
                name=run_name, 
                config=args)
@@ -165,12 +175,13 @@ for update in range(1, num_updates+1):
     ppo.update_ppo_agent(batch, save_path=f'trained-models/{args.env_id}/actor_{run_name}.pth')
 
     # Unifinished episodes
-    if len(stats['episode_returns'])==0: 
-        stats['episode_returns'] = np.array([0])
-    if len(stats['episode_lengths'])==0:
-        stats['episode_lengths'] = np.array([args.num_steps])
-    if len(stats['episode_timesteps'])==0:
-        stats['episode_timesteps'] = np.array([stats['initial_timestep']])
+    if not is_boxes_env:
+        if len(stats['episode_returns'])==0: 
+            stats['episode_returns'] = np.array([0])
+        if len(stats['episode_lengths'])==0:
+            stats['episode_lengths'] = np.array([args.num_steps])
+        if len(stats['episode_timesteps'])==0:
+            stats['episode_timesteps'] = np.array([stats['initial_timestep']])
         
     # Print stats
     if args.verbose:
@@ -179,6 +190,7 @@ for update in range(1, num_updates+1):
             # print stats with mean and std and 3 decimals
             print(f"Episodic return: {stats['episode_returns'].mean():.3f}±{stats['episode_returns'].std():.3f}")
             print(f"Episodic length: {stats['episode_lengths'].mean():.3f}±{stats['episode_lengths'].std():.3f}")
+            if is_boxes_env: print(f"Eat counts: {stats['eat_counts'].mean():.3f}±{stats['eat_counts'].std():.3f}")
 
     # Plot stats
     if args.plot:
@@ -204,5 +216,9 @@ for update in range(1, num_updates+1):
                 "episode_timestep": stats['episode_timesteps'][i],
                 "episode_return": stats['episode_returns'][i],
                 "episode_length": stats['episode_lengths'][i],
+            })
+        if is_boxes_env:
+            wandb.log({
+                "average_eat_count": stats['eat_counts'].mean(),
             })
 

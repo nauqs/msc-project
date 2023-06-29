@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import gymnasium as gym
+import time
 
 def get_state_tensor(state, cnn=True):
     if cnn:
@@ -47,12 +48,12 @@ def plot_logs(timesteps, rewards, episode_lengths, step, smooth=True, title="ppo
     plt.close()
     
 
-class ActionCostWrapper(gym.Wrapper):
+class TimeCostWrapper(gym.Wrapper):
     """
     Wrapper which adds a cost to actions and time.
     """
     
-    def __init__(self, env, action_cost=0.01, time_cost=0.001):
+    def __init__(self, env, action_cost=0.01, time_cost=0.01, noops_actions=[6]):
         """A wrapper that adds a cost to actions and time.
 
         Args:
@@ -63,12 +64,17 @@ class ActionCostWrapper(gym.Wrapper):
         super().__init__(env)
         self.action_cost = action_cost
         self.time_cost = time_cost
+        self.noops_actions = noops_actions
 
     def step(self, action):
         """Steps through the environment with `action`."""
         obs, reward, terminated, truncated, info = self.env.step(action)
 
-        # TODO: split into action cost and time cost
-        reward -= self.action_cost
+        # add time cost
+        reward -= self.time_cost
+
+        # add action cost
+        if action not in self.noops_actions:
+            reward -= self.action_cost
 
         return obs, reward, terminated, truncated, info

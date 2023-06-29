@@ -6,12 +6,13 @@ from utils import get_state_tensor
 MAX_PATIENCE = 1000
 
 class TrajectoryCollector:
-    def __init__(self, envs, obs_dim, agent, args, device):
+    def __init__(self, envs, obs_dim, agent, args, device, is_boxes_env=False):
         self.envs = envs
         self.agent = agent
         self.args = args
         self.device = device
         self.obs_dim = tuple(obs_dim)
+        self.is_boxes_env = is_boxes_env
 
         self.obs = torch.zeros((self.args.num_steps, self.args.num_envs) + self.obs_dim).to(device)
         self.actions = torch.zeros((self.args.num_steps, self.args.num_envs) + envs.single_action_space.shape).to(device)
@@ -25,6 +26,7 @@ class TrajectoryCollector:
         
         stats = {'initial_timestep': self.global_step}
         episode_returns, episode_lengths, episode_timesteps = [], [], []
+        if self.is_boxes_env: eat_counts = []
         state = self.envs.reset()[0]
         next_obs = get_state_tensor(state).to(self.device)
         next_done = torch.zeros(self.args.num_envs).to(self.device)
@@ -52,6 +54,7 @@ class TrajectoryCollector:
             if 'final_info' in info:
                 for env_final_info in info['final_info']:
                     if env_final_info is not None:
+                        if self.is_boxes_env: eat_counts.append(env_final_info['eat_count'])
                         episode_returns.append(env_final_info['episode']['r'].item())
                         episode_lengths.append(env_final_info['episode']['l'].item())
                         episode_timesteps.append(self.global_step)
@@ -82,5 +85,6 @@ class TrajectoryCollector:
         stats['episode_lengths'] = np.array(episode_lengths)
         stats['episode_timesteps'] = np.array(episode_timesteps)
         stats['final_timestep'] = self.global_step
+        if self.is_boxes_env: stats['eat_counts'] = np.array(eat_counts)
         
         return batch, stats
