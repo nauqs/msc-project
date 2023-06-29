@@ -44,8 +44,10 @@ def parse_args():
         help="the id of the environment")
     parser.add_argument("--fully-obs", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to use the fully observable wrapper")
+    parser.add_argument("--time-cost", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+        help="whether to use time cost")
     parser.add_argument("--action-cost", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="whether to use the action cost wrapper")
+        help="whether to use action cost")
     parser.add_argument("--total-timesteps", type=int, default=1000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
@@ -84,7 +86,7 @@ def parse_args():
     # fmt: on
     return args
 
-def make_env(env_id, fully_obs, action_cost, seed, idx, capture_video, run_name):
+def make_env(env_id, fully_obs, time_cost, action_cost, seed, idx, capture_video, run_name):
     def thunk():
         if env_id == "MiniGrid-FourRooms-v0":
             env = gym.make(env_id, max_steps=1024)
@@ -96,7 +98,10 @@ def make_env(env_id, fully_obs, action_cost, seed, idx, capture_video, run_name)
             env = gym.make(env_id)
         # get env max steps
         if fully_obs: env = FullyObsWrapper(env)
-        if action_cost: env = TimeCostWrapper(env, time_cost=1./env.max_steps, action_cost=0)
+        if action_cost or time_cost: 
+            time_cost_value = 0.5/env.max_steps if time_cost else 0
+            action_cost_value = 0.5/env.max_steps if action_cost else 0
+            env = TimeCostWrapper(env, time_cost=time_cost_value, action_cost=action_cost_value)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = ReseedWrapper(env, 
                             seeds=list(range(100000)), # 100k different seeds for env.reset()
@@ -119,6 +124,7 @@ print(args)
 envs = gym.vector.SyncVectorEnv(
     [make_env(args.env_id, 
               args.fully_obs, 
+              args.time_cost,
               args.action_cost,
               args.seed+i, 
               i, 
@@ -162,6 +168,7 @@ if args.wandb:
     wandb.config.update({"env_type": env_type})
 
 timestep_history, return_history, length_history = [], [], []
+if is_boxes_env: cumulative_eat_counts = 0
 
 # Run training algorithm
 for update in range(1, num_updates+1):
@@ -207,9 +214,11 @@ for update in range(1, num_updates+1):
     # Log metrics to wandb
     if args.wandb:
         if is_boxes_env:
+            cumulative_eat_counts += stats['eat_counts'].mean()
             wandb.log({
                 "average_return": stats['episode_returns'].mean(),
                 "average_eat_count": stats['eat_counts'].mean(),
+                "cumulative_average_eat_count": cumulative_eat_counts,
                 "timestep": stats['initial_timestep'],
             })
         else:
