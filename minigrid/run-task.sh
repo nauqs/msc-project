@@ -19,6 +19,10 @@ else
     cuda_option="--cuda false"
 fi
 
+# Create the experiment name
+timestamp=$(date "+%m%d-%H%M%S.%3N")
+exp_name="${timestamp}_${TASK_ID}"
+
 # Execute the command
 echo "Executing task with parameters: env_id=$env_id, time_cost=$time_cost, action_cost=$action_cost, fully_obs=$fully_obs, wandb=$wandb, seed=$seed, total_timesteps=$total_timesteps, num_envs=$num_envs, num_steps=$num_steps, ent_coef=$ent_coef, exp_name=$exp_name, $cuda_option"
 cd /cluster/project2/tithonus/msc-project/minigrid
