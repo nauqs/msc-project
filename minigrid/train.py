@@ -206,19 +206,23 @@ for update in range(1, num_updates+1):
         
     # Log metrics to wandb
     if args.wandb:
-        wandb.log({
-            "average_return": stats['episode_returns'].mean(),
-            "average_length": stats['episode_lengths'].mean(),
-            "timestep": stats['initial_timestep'],
-        })
+        if is_boxes_env:
+            wandb.log({
+                "average_return": stats['episode_returns'].mean(),
+                "average_eat_count": stats['eat_counts'].mean(),
+                "timestep": stats['initial_timestep'],
+            })
+        else:
+            wandb.log({
+                "average_return": stats['episode_returns'].mean(),
+                "average_length": stats['episode_lengths'].mean(),
+                "timestep": stats['initial_timestep'],
+            })
         for i in range(len(stats['episode_returns'])):
             wandb.log({
                 "episode_timestep": stats['episode_timesteps'][i],
                 "episode_return": stats['episode_returns'][i],
                 "episode_length": stats['episode_lengths'][i],
             })
-        if is_boxes_env:
-            wandb.log({
-                "average_eat_count": stats['eat_counts'].mean(),
-            })
+
 
