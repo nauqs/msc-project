@@ -92,9 +92,10 @@ class SimpleBoxesEnv(MiniGridEnv):
         self.agent_start_dir = agent_start_dir
         self.close_prob = close_prob
         mission_space = MissionSpace(mission_func=self._gen_mission)
+        self.eat_count = 0
 
         if max_steps is None:
-            max_steps = 256
+            max_steps = 128
 
         super().__init__(
             mission_space=mission_space,
@@ -140,6 +141,7 @@ class SimpleBoxesEnv(MiniGridEnv):
             if fwd_cell is not None and fwd_cell.type == "box":
                 if fwd_cell.state == 1:
                         reward += 1
+                        self.eat_count += 1
 
         # box dynamics
         box_positions = [(1, self.height-2), (self.width-2, 1)]
@@ -156,6 +158,10 @@ class SimpleBoxesEnv(MiniGridEnv):
                     box.state = 0
 
         #print(obs['image'][3,-2,:]) # print fwd cell 
+
+        info['eat_count'] = self.eat_count
+        if truncated or terminated:
+            self.eat_count = 0
 
         return obs, reward, terminated, truncated, info
 
@@ -188,6 +194,7 @@ class MazeBoxesEnv(MiniGridEnv):
         self.agent_start_dir = agent_start_dir
         self.close_prob = close_prob
         mission_space = MissionSpace(mission_func=self._gen_mission)
+        self.eat_count = 0
 
         if max_steps is None:
             max_steps = 256
@@ -244,6 +251,7 @@ class MazeBoxesEnv(MiniGridEnv):
             if fwd_cell is not None and fwd_cell.type == "box":
                 if fwd_cell.state == 1:
                         reward += 1
+                        self.eat_count += 1
 
         # box dynamics
         box_positions = [(1, self.height-2), (self.width-2, 1)]
@@ -257,5 +265,9 @@ class MazeBoxesEnv(MiniGridEnv):
             elif box.state == 2: # open -> closed with some probability
                 if self.np_random.uniform() < self.close_prob:
                     box.state = 0
+
+        info['eat_count'] = self.eat_count
+        if truncated or terminated:
+            self.eat_count = 0
 
         return obs, reward, terminated, truncated, info
