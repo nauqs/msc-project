@@ -188,7 +188,7 @@ class SimpleBoxesEnv(BaseBoxesEnv):
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
-        close_prob=0.025,
+        close_prob=0.05,
         **kwargs,
     ):
         super().__init__(size, agent_start_pos, agent_start_dir, max_steps, close_prob, **kwargs)
