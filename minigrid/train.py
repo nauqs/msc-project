@@ -224,7 +224,7 @@ for update in range(1, num_updates+1):
     # Log metrics to wandb
     if args.wandb:
         if is_boxes_env:
-            cumulative_eat_counts += stats['eat_counts'].mean()
+            cumulative_eat_counts += stats['eat_counts'].sum()
             cumulative_red_counts += stats['red_counts'].sum()
             cumulative_blue_counts += stats['blue_counts'].sum()
             cumulative_agent_distances += stats['agent_distances'].sum()
@@ -233,15 +233,15 @@ for update in range(1, num_updates+1):
             wandb.log({
                 "average_return": stats['episode_returns'].mean(),
                 "average_eat_count": stats['eat_counts'].mean(),
-                "cumulative_average_eat_count": cumulative_eat_counts,
+                "cumulative_eat_count": cumulative_eat_counts,
                 "average_red_count": stats['red_counts'].mean(),
-                "cumulative_average_red_count": cumulative_red_counts,
+                "cumulative_red_count": cumulative_red_counts,
                 "average_blue_count": stats['blue_counts'].mean(),
-                "cumulative_average_blue_count": cumulative_blue_counts,
+                "cumulative_blue_count": cumulative_blue_counts,
                 "average_agent_distance": stats['agent_distances'].mean(),
-                "cumulative_average_agent_distance": cumulative_agent_distances,
+                "cumulative_agent_distance": cumulative_agent_distances,
                 "average_consecutive_boxes": stats['consecutive_boxes'].mean(),
-                "cumulative_average_consecutive_boxes": cumulative_consecutive_boxes,
+                "cumulative_consecutive_boxes": cumulative_consecutive_boxes,
                 "average_mix_rate": stats['mix_rate'].mean(),
                 "timestep": stats['initial_timestep'],
             })
