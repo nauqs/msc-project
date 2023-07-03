@@ -145,8 +145,7 @@ class BaseBoxesEnv(MiniGridEnv):
                         else: self.last_box_opened = "blue"
 
         # box dynamics
-        box_positions = [(1, self.height-2), (self.width-2, 1)]
-        for box_pos in box_positions:
+        for box_pos in self.box_positions:
             box = self.grid.get(*box_pos)
             if box.state == 1: # half-open -> open
                 if box.half_open_step:
@@ -185,8 +184,8 @@ class SimpleBoxesEnv(BaseBoxesEnv):
     def __init__(
         self,
         size=5,
-        agent_start_pos=(1, 1),
-        agent_start_dir=0,
+        agent_start_pos=(2, 1),
+        agent_start_dir=1,
         max_steps: int | None = None,
         close_prob=0.05,
         **kwargs,
@@ -201,8 +200,9 @@ class SimpleBoxesEnv(BaseBoxesEnv):
         self.grid.wall_rect(0, 0, width, height)
         
         # Place the two boxes
-        self.grid.set(1, height-2, CustomBox(COLOR_NAMES[0])) # blue
-        self.grid.set(width-2, 1, CustomBox(COLOR_NAMES[4])) # red
+        self.box_positions = [(1, height-2), (width-2, 3)]
+        self.grid.set(*self.box_positions[0], CustomBox(COLOR_NAMES[0])) # blue
+        self.grid.set(*self.box_positions[1], CustomBox(COLOR_NAMES[4])) # red
 
         # Place the agent
         if self.agent_start_pos is not None:
@@ -243,8 +243,9 @@ class MazeBoxesEnv(BaseBoxesEnv):
             self.grid.set(i, 4, Wall())
         
         # Place the two boxes
-        self.grid.set(1, height-2, CustomBox(COLOR_NAMES[0])) # blue
-        self.grid.set(width-2, 1, CustomBox(COLOR_NAMES[4])) # green
+        self.box_positions = [(1, height-3), (width-2, 2)]
+        self.grid.set(*self.box_positions[0], CustomBox(COLOR_NAMES[0])) # blue
+        self.grid.set(*self.box_positions[1], CustomBox(COLOR_NAMES[4])) # red
 
         # Place the agent
         if self.agent_start_pos is not None:
