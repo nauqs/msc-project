@@ -17,6 +17,7 @@ from minigrid.utils.rendering import (
     point_in_line,
     point_in_rect,
 )
+import numpy as np
 
 
 class CustomBox(WorldObj):
@@ -64,7 +65,7 @@ class CustomBox(WorldObj):
         if self.state == 2:
             fill_coords(img, point_in_rect(0.18, 0.82, 0.32, 0.82), (0, 0, 0))
 
-class SimpleBoxesEnv(MiniGridEnv):
+class BaseBoxesEnv(MiniGridEnv):
 
     """
     
@@ -85,17 +86,27 @@ class SimpleBoxesEnv(MiniGridEnv):
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
-        close_prob=0.2,
+        close_prob=0.1,
         **kwargs,
     ):
+        # set up initial positions
         self.agent_start_pos = agent_start_pos
         self.agent_start_dir = agent_start_dir
+        
+        # box and goal dynamics
         self.close_prob = close_prob
         mission_space = MissionSpace(mission_func=self._gen_mission)
-        self.eat_count = 0
-
         if max_steps is None:
-            max_steps = 256
+            max_steps = int(18 * size ** 1.5)
+
+        # stats tracking
+        self.eat_count = 0
+        self.red_count = 0
+        self.blue_count = 0
+        self.previous_agent_pos = agent_start_pos
+        self.agent_distance = 0
+        self.last_box_opened = None
+        self.consecutive_boxes = 0
 
         super().__init__(
             mission_space=mission_space,
@@ -111,6 +122,78 @@ class SimpleBoxesEnv(MiniGridEnv):
         return "grand mission"
 
     def _gen_grid(self, width, height):
+        raise NotImplementedError
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = super().step(action)
+
+        # give reward if forward cell is half-open box and action is pickup (eat)
+        fwd_cell = self.grid.get(*self.front_pos)
+        if action == self.actions.pickup:
+            fwd_cell = self.grid.get(*self.front_pos)
+            if fwd_cell is not None and fwd_cell.type == "box":
+                if fwd_cell.state == 1:
+                    reward += 1
+                    self.eat_count += 1
+                    if fwd_cell.color == "red":
+                        self.red_count += 1
+                        if self.last_box_opened == "red": self.consecutive_boxes += 1
+                        else: self.last_box_opened = "red"
+                    elif fwd_cell.color == "blue":
+                        self.blue_count += 1
+                        if self.last_box_opened == "blue": self.consecutive_boxes += 1
+                        else: self.last_box_opened = "blue"
+
+        # box dynamics
+        box_positions = [(1, self.height-2), (self.width-2, 1)]
+        for box_pos in box_positions:
+            box = self.grid.get(*box_pos)
+            if box.state == 1: # half-open -> open
+                if box.half_open_step:
+                    box.half_open_step = False
+                else:
+                    box.state = 2
+            elif box.state == 2: # open -> closed with some probability
+                if self.np_random.uniform() < self.close_prob:
+                    box.state = 0
+        
+        self.agent_distance += np.round(np.linalg.norm(np.array(self.agent_pos) - np.array(self.previous_agent_pos)))
+        self.previous_agent_pos = self.agent_pos
+
+        # return dict before resetting stats
+        info['eat_count'] = self.eat_count
+        info['red_count'] = self.red_count
+        info['blue_count'] = self.blue_count
+        info['agent_distance'] = self.agent_distance
+        info['consecutive_boxes'] = self.consecutive_boxes
+        info['mix_rate'] = 1.0 - (self.consecutive_boxes / self.eat_count) if self.eat_count > 0 else 0.0
+        
+        # reset stats if episode ended
+        if truncated or terminated:
+            self.eat_count = 0
+            self.red_count = 0
+            self.blue_count = 0
+            self.agent_distance = 0   
+            self.consecutive_boxes = 0
+            self.previous_agent_pos = self.agent_start_pos
+
+        return obs, reward, terminated, truncated, info
+
+
+class SimpleBoxesEnv(BaseBoxesEnv):
+
+    def __init__(
+        self,
+        size=5,
+        agent_start_pos=(1, 1),
+        agent_start_dir=0,
+        max_steps: int | None = None,
+        close_prob=0.025,
+        **kwargs,
+    ):
+        super().__init__(size, agent_start_pos, agent_start_dir, max_steps, close_prob, **kwargs)
+
+    def _gen_grid(self, width, height):
         # Create an empty grid
         self.grid = Grid(width, height)
 
@@ -118,8 +201,8 @@ class SimpleBoxesEnv(MiniGridEnv):
         self.grid.wall_rect(0, 0, width, height)
         
         # Place the two boxes
-        self.grid.set(1, height-2, CustomBox(COLOR_NAMES[0]))
-        self.grid.set(width-2, 1, CustomBox(COLOR_NAMES[1]))
+        self.grid.set(1, height-2, CustomBox(COLOR_NAMES[0])) # blue
+        self.grid.set(width-2, 1, CustomBox(COLOR_NAMES[4])) # red
 
         # Place the agent
         if self.agent_start_pos is not None:
@@ -131,55 +214,7 @@ class SimpleBoxesEnv(MiniGridEnv):
         self.mission = "grand mission"
 
 
-    def step(self, action):
-        obs, reward, terminated, truncated, info = super().step(action)
-
-        # give reward if forward cell is half-open box and action is pickup (eat)
-        fwd_cell = self.grid.get(*self.front_pos)
-        if action == self.actions.pickup:
-            fwd_cell = self.grid.get(*self.front_pos)
-            if fwd_cell is not None and fwd_cell.type == "box":
-                if fwd_cell.state == 1:
-                        reward += 1
-                        self.eat_count += 1
-
-        # box dynamics
-        box_positions = [(1, self.height-2), (self.width-2, 1)]
-        for box_pos in box_positions:
-            box = self.grid.get(*box_pos)
-            if box.state == 1: # half-open -> open
-                if box.half_open_step:
-                    box.half_open_step = False
-                else:
-                    box.state = 2
-                    obs['image'][3,-2,-1] = 2 # set box to open in observation
-            elif box.state == 2: # open -> closed with some probability
-                if self.np_random.uniform() < self.close_prob:
-                    box.state = 0
-
-        #print(obs['image'][3,-2,:]) # print fwd cell 
-
-        info['eat_count'] = self.eat_count
-        if truncated or terminated:
-            self.eat_count = 0
-
-        return obs, reward, terminated, truncated, info
-
-
-class MazeBoxesEnv(MiniGridEnv):
-
-    """
-    
-    | Num | Name         | Action               |
-    |-----|--------------|----------------------|
-    | 0   | left         | Turn left            |
-    | 1   | right        | Turn right           |
-    | 2   | forward      | Move forward         |
-    | 3   | pickup       | Eat                  |
-    | 4   | drop         | Unused               |
-    | 5   | toggle       | Open box             |
-    | 6   | done         | Unused               |
-    """
+class MazeBoxesEnv(BaseBoxesEnv):
 
     def __init__(
         self,
@@ -187,30 +222,10 @@ class MazeBoxesEnv(MiniGridEnv):
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
-        close_prob=0.1,
+        close_prob=0.01,
         **kwargs,
     ):
-        self.agent_start_pos = agent_start_pos
-        self.agent_start_dir = agent_start_dir
-        self.close_prob = close_prob
-        mission_space = MissionSpace(mission_func=self._gen_mission)
-        self.eat_count = 0
-
-        if max_steps is None:
-            max_steps = 512
-
-        super().__init__(
-            mission_space=mission_space,
-            grid_size=size,
-            # Set this to True for maximum speed
-            see_through_walls=True,
-            max_steps=max_steps,
-            **kwargs,
-        )
-
-    @staticmethod
-    def _gen_mission():
-        return "grand mission"
+        super().__init__(size, agent_start_pos, agent_start_dir, max_steps, close_prob, **kwargs)
 
     def _gen_grid(self, width, height):
         # Create an empty grid
@@ -228,8 +243,8 @@ class MazeBoxesEnv(MiniGridEnv):
             self.grid.set(i, 4, Wall())
         
         # Place the two boxes
-        self.grid.set(1, height-2, CustomBox(COLOR_NAMES[0]))
-        self.grid.set(width-2, 1, CustomBox(COLOR_NAMES[1]))
+        self.grid.set(1, height-2, CustomBox(COLOR_NAMES[0])) # blue
+        self.grid.set(width-2, 1, CustomBox(COLOR_NAMES[4])) # green
 
         # Place the agent
         if self.agent_start_pos is not None:
@@ -240,34 +255,3 @@ class MazeBoxesEnv(MiniGridEnv):
 
         self.mission = "grand mission"
 
-
-    def step(self, action):
-        obs, reward, terminated, truncated, info = super().step(action)
-
-        # give reward if forward cell is half-open box and action is pickup (eat)
-        fwd_cell = self.grid.get(*self.front_pos)
-        if action == self.actions.pickup:
-            fwd_cell = self.grid.get(*self.front_pos)
-            if fwd_cell is not None and fwd_cell.type == "box":
-                if fwd_cell.state == 1:
-                        reward += 1
-                        self.eat_count += 1
-
-        # box dynamics
-        box_positions = [(1, self.height-2), (self.width-2, 1)]
-        for box_pos in box_positions:
-            box = self.grid.get(*box_pos)
-            if box.state == 1: # half-open -> open
-                if box.half_open_step:
-                    box.half_open_step = False
-                else:
-                    box.state = 2
-            elif box.state == 2: # open -> closed with some probability
-                if self.np_random.uniform() < self.close_prob:
-                    box.state = 0
-
-        info['eat_count'] = self.eat_count
-        if truncated or terminated:
-            self.eat_count = 0
-
-        return obs, reward, terminated, truncated, info

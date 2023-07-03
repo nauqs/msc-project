@@ -54,7 +54,7 @@ def parse_args():
         help="the learning rate of the optimizer")
     parser.add_argument("--num-envs", type=int, default=16,
         help="the number of parallel game environments")
-    parser.add_argument("--num-steps", type=int, default=256,
+    parser.add_argument("--num-steps", type=int, default=512,
         help="the number of steps to run in each environment per policy rollout")
     parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="Toggle learning rate annealing for policy and value networks")
@@ -103,7 +103,7 @@ def make_env(env_id, fully_obs, time_cost, action_cost, seed, idx, capture_video
                 time_cost_value = 1./env.max_steps if time_cost else 0
                 action_cost_value = 1./env.max_steps if action_cost else 0
                 env = TimeCostWrapper(env, time_cost=time_cost_value, 
-                                    action_cost=action_cost_value,
+                                    action_cost=-action_cost_value,
                                     noops_actions=[4,6])
             else:
                 time_cost_value = 0.5/env.max_steps if time_cost else 0
@@ -176,7 +176,11 @@ if args.wandb:
     wandb.config.update({"env_type": env_type})
 
 timestep_history, return_history, length_history = [], [], []
-if is_boxes_env: cumulative_eat_counts = 0
+if is_boxes_env: 
+    cumulative_eat_counts = 0
+    cumulative_red_counts = 0
+    cumulative_blue_counts = 0
+    cumulative_agent_distances = 0
 
 # Run training algorithm
 for update in range(1, num_updates+1):
@@ -205,7 +209,13 @@ for update in range(1, num_updates+1):
             # print stats with mean and std and 3 decimals
             print(f"Episodic return: {stats['episode_returns'].mean():.3f}±{stats['episode_returns'].std():.3f}")
             print(f"Episodic length: {stats['episode_lengths'].mean():.3f}±{stats['episode_lengths'].std():.3f}")
-            if is_boxes_env: print(f"Eat counts: {stats['eat_counts'].mean():.3f}±{stats['eat_counts'].std():.3f}")
+            if is_boxes_env: 
+                print(f"Eat counts: {stats['eat_counts'].mean():.3f}±{stats['eat_counts'].std():.3f}")
+                print(f"Red counts: {stats['red_counts'].mean():.3f}±{stats['red_counts'].std():.3f}")
+                print(f"Blue counts: {stats['blue_counts'].mean():.3f}±{stats['blue_counts'].std():.3f}")
+                print(f"Agent distances: {stats['agent_distances'].mean():.3f}±{stats['agent_distances'].std():.3f}")
+                print(f"Consecutive boxes: {stats['consecutive_boxes'].mean():.3f}±{stats['consecutive_boxes'].std():.3f}")
+                print(f"Mix rate: {stats['mix_rate'].mean():.3f}±{stats['mix_rate'].std():.3f}")
 
     # Plot stats
     if args.plot:
@@ -223,10 +233,24 @@ for update in range(1, num_updates+1):
     if args.wandb:
         if is_boxes_env:
             cumulative_eat_counts += stats['eat_counts'].mean()
+            cumulative_red_counts += stats['red_counts'].sum()
+            cumulative_blue_counts += stats['blue_counts'].sum()
+            cumulative_agent_distances += stats['agent_distances'].sum()
+            cumulative_consecutive_boxes = stats['consecutive_boxes'].sum()
+
             wandb.log({
                 "average_return": stats['episode_returns'].mean(),
                 "average_eat_count": stats['eat_counts'].mean(),
                 "cumulative_average_eat_count": cumulative_eat_counts,
+                "average_red_count": stats['red_counts'].mean(),
+                "cumulative_average_red_count": cumulative_red_counts,
+                "average_blue_count": stats['blue_counts'].mean(),
+                "cumulative_average_blue_count": cumulative_blue_counts,
+                "average_agent_distance": stats['agent_distances'].mean(),
+                "cumulative_average_agent_distance": cumulative_agent_distances,
+                "average_consecutive_boxes": stats['consecutive_boxes'].mean(),
+                "cumulative_average_consecutive_boxes": cumulative_consecutive_boxes,
+                "average_mix_rate": stats['mix_rate'].mean(),
                 "timestep": stats['initial_timestep'],
             })
         else:

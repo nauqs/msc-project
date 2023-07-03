@@ -26,7 +26,8 @@ class TrajectoryCollector:
         
         stats = {'initial_timestep': self.global_step}
         episode_returns, episode_lengths, episode_timesteps = [], [], []
-        if self.is_boxes_env: eat_counts = []
+        if self.is_boxes_env: 
+            eat_counts, red_counts, blue_counts, agent_distances, consecutive_boxes, mix_rates = [], [], [], [], [], []
         state = self.envs.reset()[0]
         next_obs = get_state_tensor(state).to(self.device)
         next_done = torch.zeros(self.args.num_envs).to(self.device)
@@ -54,7 +55,14 @@ class TrajectoryCollector:
             if 'final_info' in info:
                 for env_final_info in info['final_info']:
                     if env_final_info is not None:
-                        if self.is_boxes_env: eat_counts.append(env_final_info['eat_count'])
+                        if self.is_boxes_env: 
+                            eat_counts.append(env_final_info['eat_count'])
+                            red_counts.append(env_final_info['red_count'])
+                            blue_counts.append(env_final_info['blue_count'])
+                            agent_distances.append(env_final_info['agent_distance'])
+                            consecutive_boxes.append(env_final_info['consecutive_boxes'])
+                            mix_rates.append(env_final_info['mix_rate'])
+
                         episode_returns.append(env_final_info['episode']['r'].item())
                         episode_lengths.append(env_final_info['episode']['l'].item())
                         episode_timesteps.append(self.global_step)
@@ -85,6 +93,12 @@ class TrajectoryCollector:
         stats['episode_lengths'] = np.array(episode_lengths)
         stats['episode_timesteps'] = np.array(episode_timesteps)
         stats['final_timestep'] = self.global_step
-        if self.is_boxes_env: stats['eat_counts'] = np.array(eat_counts)
+        if self.is_boxes_env: 
+            stats['eat_counts'] = np.array(eat_counts)
+            stats['red_counts'] = np.array(red_counts)
+            stats['blue_counts'] = np.array(blue_counts)
+            stats['agent_distances'] = np.array(agent_distances)
+            stats['consecutive_boxes'] = np.array(consecutive_boxes)
+            stats['mix_rate'] = np.array(mix_rates)
         
         return batch, stats
