@@ -44,17 +44,17 @@ def parse_args():
         help="the id of the environment")
     parser.add_argument("--fully-obs", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to use the fully observable wrapper")
-    parser.add_argument("--time-cost", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="whether to use time cost")
-    parser.add_argument("--action-cost", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="whether to use action cost")
+    parser.add_argument("--time-cost", type=float, default=0,
+                        help="value of the time cost")
+    parser.add_argument("--action-cost", type=float, default=0,
+                        help="value of the action cost")
     parser.add_argument("--total-timesteps", type=int, default=1000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
         help="the learning rate of the optimizer")
     parser.add_argument("--num-envs", type=int, default=16,
         help="the number of parallel game environments")
-    parser.add_argument("--num-steps", type=int, default=512,
+    parser.add_argument("--num-steps", type=int, default=256,
         help="the number of steps to run in each environment per policy rollout")
     parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="Toggle learning rate annealing for policy and value networks")
@@ -62,7 +62,7 @@ def parse_args():
         help="the discount factor gamma")
     parser.add_argument("--gae-lambda", type=float, default=0.95,
         help="the lambda for the general advantage estimation")
-    parser.add_argument("--num-minibatches", type=int, default=4,
+    parser.add_argument("--num-minibatches", type=int, default=16,
         help="the number of mini-batches")
     parser.add_argument("--update-epochs", type=int, default=4,
         help="the K epochs to update the policy")
@@ -98,18 +98,10 @@ def make_env(env_id, fully_obs, time_cost, action_cost, seed, idx, capture_video
             env = gym.make(env_id)
         # get env max steps
         if fully_obs: env = FullyObsWrapper(env)
-        if action_cost or time_cost: 
-            if env_id in ["SimpleBoxes", "MazeBoxes"]:
-                time_cost_value = 1./env.max_steps if time_cost else 0
-                action_cost_value = 1./env.max_steps if action_cost else 0
-                env = TimeCostWrapper(env, time_cost=time_cost_value, 
-                                    action_cost=-action_cost_value,
-                                    noops_actions=[4,6])
-            else:
-                time_cost_value = 0.5/env.max_steps if time_cost else 0
-                action_cost_value = 0.5/env.max_steps if action_cost else 0
-                env = TimeCostWrapper(env, time_cost=time_cost_value, 
-                                    action_cost=action_cost_value) # TO DO: add noops_actions
+        if action_cost > 0 or time_cost > 0: 
+            env = TimeCostWrapper(env, time_cost=time_cost, 
+                                action_cost=action_cost,
+                                noops_actions=[4,6])
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = ReseedWrapper(env, 
                             seeds=list(range(100000)), # 100k different seeds for env.reset()
