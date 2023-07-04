@@ -18,7 +18,7 @@ from models import MiniGridAgent
 from storage import TrajectoryCollector
 from ppo import PPO
 from utils import plot_logs, get_state_tensor, TimeCostWrapper
-from customenvs import SimpleBoxesEnv, MazeBoxesEnv
+from customenvs import SimpleBoxesEnv, MazeBoxesEnv, SwitchingBoxesEnv
 
 def parse_args():
     # fmt: off
@@ -94,6 +94,8 @@ def make_env(env_id, fully_obs, time_cost, action_cost, seed, idx, capture_video
             env = SimpleBoxesEnv()
         elif env_id == "MazeBoxes":
             env = MazeBoxesEnv()
+        elif env_id == "SwitchingBoxes":
+            env = SwitchingBoxesEnv()
         else:
             env = gym.make(env_id)
         # get env max steps
@@ -149,7 +151,7 @@ obs_dim = get_state_tensor(envs.reset()[0])[0].shape
 agent = MiniGridAgent(obs_dim, envs.single_action_space.n, n_channels=4).to(device)
 
 # Define storage and ppo objects
-is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes"]
+is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes", "SwitchingBoxes"]
 storage = TrajectoryCollector(envs, obs_dim, agent, args, device, is_boxes_env=is_boxes_env)
 ppo = PPO(agent, args, device)
 
@@ -161,7 +163,7 @@ if args.wandb:
         env_type = "Boxes"
     else:
         env_type = args.env_id.split('-')[1]
-    wandb.init(project="foodboxes-experiments", 
+    wandb.init(project="switching-boxes-experiments", 
                entity="nauqs",
                name=run_name, 
                config=args)
