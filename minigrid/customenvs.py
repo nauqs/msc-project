@@ -200,7 +200,7 @@ class SimpleBoxesEnv(BaseBoxesEnv):
         self.grid.wall_rect(0, 0, width, height)
         
         # Place the two boxes
-        self.box_positions = [(1, height-2), (width-2, 3)]
+        self.box_positions = [(1, height-2), (width-2, 1)]
         self.grid.set(*self.box_positions[0], CustomBox(COLOR_NAMES[0])) # blue
         self.grid.set(*self.box_positions[1], CustomBox(COLOR_NAMES[4])) # red
 

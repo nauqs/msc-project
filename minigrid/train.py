@@ -198,7 +198,7 @@ for update in range(1, num_updates+1):
         
     # Print stats
     if args.verbose:
-        print(f"Timestep: {stats['initial_timestep']}")
+        print(f"\nTimestep: {stats['initial_timestep']}")
         if len(stats['episode_returns'])>0:
             # print stats with mean and std and 3 decimals
             print(f"Episodic return: {stats['episode_returns'].mean():.3f}±{stats['episode_returns'].std():.3f}")
