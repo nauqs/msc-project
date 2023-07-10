@@ -4,6 +4,12 @@ resource=$1  # This should be 'cpu' or 'gpu'
 EXP_FILENAME=${2:-"experiments.csv"}
 csv_file="/cluster/project2/tithonus/msc-project/minigrid/$EXP_FILENAME"
 output_directory="/cluster/project2/tithonus/logs"
+SEED_RANGE=$3  # This should be a range of seeds, like "1-100"
+
+# Extract start and end of the seed range
+IFS='-' read -r -a RANGE <<< "$SEED_RANGE"
+START=${RANGE[0]}
+END=${RANGE[1]}
 
 # Count number of lines in csv file (excluding header)
 num_tasks=$(($(wc -l < "$csv_file") - 1))
@@ -17,6 +23,9 @@ else
 fi
 
 # Submit array job
-qsub -t 2-$((num_tasks + 1)) ${resource_options} -S /bin/bash -v RESOURCE=${RESOURCE},EXP_FILENAME=${EXP_FILENAME} -wd /cluster/project2/tithonus/ -j y -N train-minigrid -o ${output_directory} run-task.sh
+for ((seed=START; seed<=END; seed++))
+do
+    qsub -t 2-$((num_tasks + 1)) ${resource_options} -S /bin/bash -v RESOURCE=${RESOURCE},EXP_FILENAME=${EXP_FILENAME},SEED=${seed} -wd /cluster/project2/tithonus/ -j y -N train-minigrid -o ${output_directory} run-task.sh
+done
 
-echo "Array job submitted with $num_tasks tasks"
+echo "Array job submitted with $num_tasks tasks for each seed from $START to $END"
