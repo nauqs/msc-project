@@ -255,6 +255,7 @@ for update in range(1, num_updates+1):
             wandb.log({
                 "average_return": stats['episode_returns'].mean(),
                 "average_length": stats['episode_lengths'].mean(),
+                "success_rate": (stats['episode_returns'] > 0).astype(int).mean(),
                 "timestep": stats['initial_timestep'],
             })
         for i in range(len(stats['episode_returns'])):
