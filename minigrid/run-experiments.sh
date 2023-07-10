@@ -23,9 +23,6 @@ else
 fi
 
 # Submit array job
-for ((seed=START; seed<=END; seed++))
-do
-    qsub -t 2-$((num_tasks + 1)) ${resource_options} -S /bin/bash -v RESOURCE=${RESOURCE},EXP_FILENAME=${EXP_FILENAME},SEED=${seed} -wd /cluster/project2/tithonus/ -j y -N train-minigrid -o ${output_directory} run-task.sh
-done
+qsub -t 2-$((num_tasks + 1)):1 -tc $((END - START + 1)) ${resource_options} -S /bin/bash -v RESOURCE=${RESOURCE},EXP_FILENAME=${EXP_FILENAME},START_SEED=${START} -wd /cluster/project2/tithonus/ -j y -N train-minigrid -o ${output_directory} run-task.sh
 
 echo "Array job submitted with $num_tasks tasks for each seed from $START to $END"

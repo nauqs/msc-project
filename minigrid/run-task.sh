@@ -4,7 +4,8 @@
 TASK_ID=${SGE_TASK_ID}
 EXP_FILENAME=${EXP_FILENAME}
 CSV_FILE="/cluster/project2/tithonus/msc-project/minigrid/$EXP_FILENAME"
-seed=${SEED}
+START_SEED=${START_SEED}
+seed=$((START_SEED + TASK_ID - 2))  # subtract 2 because TASK_ID starts from 2
 
 echo "TASK_ID is: $TASK_ID"
 echo "SEED is: $seed"
