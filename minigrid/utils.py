@@ -53,7 +53,7 @@ class TimeCostWrapper(gym.Wrapper):
     Wrapper which adds a cost to actions and time.
     """
     
-    def __init__(self, env, action_cost=0.01, time_cost=0.01, noops_actions=[6]):
+    def __init__(self, env, action_cost=0.01, time_cost=0.01, final_reward_penalty=False, noops_actions=[6]):
         """A wrapper that adds a cost to actions and time.
 
         Args:
@@ -65,10 +65,14 @@ class TimeCostWrapper(gym.Wrapper):
         self.action_cost = action_cost
         self.time_cost = time_cost
         self.noops_actions = noops_actions
+        self.final_penalty = final_reward_penalty
 
     def step(self, action):
         """Steps through the environment with `action`."""
         obs, reward, terminated, truncated, info = self.env.step(action)
+
+        if terminated and not self.final_penalty:
+            reward = 1
 
         # add time cost
         reward -= self.time_cost

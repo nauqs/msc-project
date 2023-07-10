@@ -45,9 +45,11 @@ def parse_args():
     parser.add_argument("--fully-obs", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to use the fully observable wrapper")
     parser.add_argument("--time-cost", type=float, default=0,
-                        help="value of the time cost")
+        help="value of the time cost")
     parser.add_argument("--action-cost", type=float, default=0,
-                        help="value of the action cost")
+        help="value of the action cost")
+    parser.add_argument("--final-reward-penalty", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+        help="If false, reward when goal is reached is +1. If true, a penalty is added for each step")
     parser.add_argument("--total-timesteps", type=int, default=1000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
@@ -86,7 +88,7 @@ def parse_args():
     # fmt: on
     return args
 
-def make_env(env_id, fully_obs, time_cost, action_cost, seed, idx, capture_video, run_name):
+def make_env(env_id, fully_obs, time_cost, action_cost, final_reward_penalty, seed, idx, capture_video, run_name):
     def thunk():
         if env_id == "MiniGrid-FourRooms-v0":
             env = gym.make(env_id, max_steps=1024)
@@ -100,10 +102,11 @@ def make_env(env_id, fully_obs, time_cost, action_cost, seed, idx, capture_video
             env = gym.make(env_id)
         # get env max steps
         if fully_obs: env = FullyObsWrapper(env)
-        if action_cost > 0 or time_cost > 0: 
-            env = TimeCostWrapper(env, time_cost=time_cost, 
-                                action_cost=action_cost,
-                                noops_actions=[4,6])
+        env = TimeCostWrapper(env, 
+                            time_cost=time_cost, 
+                            action_cost=action_cost,
+                            final_reward_penalty=final_reward_penalty,
+                            noops_actions=[4,6])
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = ReseedWrapper(env, 
                             seeds=list(range(100000)), # 100k different seeds for env.reset()
@@ -128,6 +131,7 @@ envs = gym.vector.SyncVectorEnv(
               args.fully_obs, 
               args.time_cost,
               args.action_cost,
+              args.final_reward_penalty,
               args.seed+i, 
               i, 
               args.capture_video, 
@@ -163,7 +167,7 @@ if args.wandb:
         env_type = "Boxes"
     else:
         env_type = args.env_id.split('-')[1]
-    wandb.init(project="switching-boxes-experiments", 
+    wandb.init(project="experiment-1", 
                entity="nauqs",
                name=run_name, 
                config=args)
