@@ -5,13 +5,19 @@ TASK_ID=${SGE_TASK_ID}
 EXP_FILENAME=${EXP_FILENAME}
 CSV_FILE="/cluster/project2/tithonus/msc-project/minigrid/$EXP_FILENAME"
 START_SEED=${START_SEED}
-seed=$((START_SEED + TASK_ID - 2))  # subtract 2 because TASK_ID starts from 2
+NUM_SEEDS=${NUM_SEEDS}
+NUM_TASKS=${NUM_TASKS}
+
+# Calculate the seed and line number
+seed=$((START_SEED + (TASK_ID - 1) % NUM_SEEDS))
+line_number=$(((TASK_ID - 1) / NUM_SEEDS + 2))  # +2 because TASK_ID starts from 1 and line number from 2
 
 echo "TASK_ID is: $TASK_ID"
 echo "SEED is: $seed"
+echo "Line number is: $line_number"
 
 # Read the specific line from the csv file
-LINE=$(sed "${TASK_ID}q;d" $CSV_FILE)
+LINE=$(sed "${line_number}q;d" $CSV_FILE)
 
 # Parse the configuration
 IFS=, read -r env_id time_cost action_cost final_reward_penalty fully_obs wandb total_timesteps num_envs num_steps ent_coef <<< "$LINE"

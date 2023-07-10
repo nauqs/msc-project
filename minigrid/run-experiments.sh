@@ -8,8 +8,11 @@ SEED_RANGE=$3  # This should be a range of seeds, like "1-100"
 
 # Extract start and end of the seed range
 IFS='-' read -r -a RANGE <<< "$SEED_RANGE"
-START=${RANGE[0]}
-END=${RANGE[1]}
+START_SEED=${RANGE[0]}
+END_SEED=${RANGE[1]}
+
+# Calculate the number of seeds
+NUM_SEEDS=$((END_SEED - START_SEED + 1))
 
 # Count number of lines in csv file (excluding header)
 num_tasks=$(($(wc -l < "$csv_file") - 1))
@@ -23,6 +26,6 @@ else
 fi
 
 # Submit array job
-qsub -t 2-$((num_tasks + 1)):1 -tc $((END - START + 1)) ${resource_options} -S /bin/bash -v RESOURCE=${RESOURCE},EXP_FILENAME=${EXP_FILENAME},START_SEED=${START} -wd /cluster/project2/tithonus/ -j y -N train-minigrid -o ${output_directory} run-task.sh
+qsub -t 1-$((num_tasks * NUM_SEEDS)) ${resource_options} -S /bin/bash -v RESOURCE=${RESOURCE},EXP_FILENAME=${EXP_FILENAME},START_SEED=${START_SEED},NUM_SEEDS=${NUM_SEEDS},NUM_TASKS=${num_tasks} -wd /cluster/project2/tithonus/ -j y -N train-minigrid -o ${output_directory} run-task.sh
 
-echo "Array job submitted with $num_tasks tasks for each seed from $START to $END"
+echo "Array job submitted with $((num_tasks * NUM_SEEDS)) tasks"
