@@ -1,13 +1,4 @@
 env-id,time-cost,action-cost,final-reward-penalty,fully-obs,wandb,total-timesteps,num-envs,num-steps,ent-coef,gae_lambda
-MiniGrid-Empty-6x6-v0,0,0,false,false,true,1000000,16,1024,0.01,0
-MiniGrid-Empty-6x6-v0,0,0,true,false,true,1000000,16,1024,0.01,0
-MiniGrid-Empty-6x6-v0,0.00087890625,0,false,false,true,1000000,16,1024,0.01,0
-MiniGrid-Empty-6x6-Random-v0,0,0,false,false,true,1000000,16,1024,0.01,0
-MiniGrid-Empty-6x6-Random-v0,0,0,true,false,true,1000000,16,1024,0.01,0
-MiniGrid-Empty-6x6-Random-v0,0.00087890625,0,false,false,true,1000000,16,1024,0.01,0
-MiniGrid-DoorKey-5x5-v0,0,0,false,false,true,5000000,64,640,0.01,0.95
-MiniGrid-DoorKey-5x5-v0,0,0,true,false,true,5000000,64,640,0.01,0.95
-MiniGrid-DoorKey-5x5-v0,0.00140625,0,false,false,true,5000000,64,640,0.01,0.95
 MiniGrid-Empty-16x16-v0,0,0,false,false,true,1000000,16,1024,0.01,0.5
 MiniGrid-Empty-16x16-v0,0,0,true,false,true,1000000,16,1024,0.01,0.5
 MiniGrid-Empty-16x16-v0,0.00087890625,0,false,false,true,1000000,16,1024,0.01,0.5
@@ -17,3 +8,12 @@ MiniGrid-FourRooms-v0,0.00087890625,0,false,false,true,5000000,64,1024,0.01,0.5
 MiniGrid-DoorKey-8x8-v0,0,0,false,false,true,5000000,64,640,0.01,0.5
 MiniGrid-DoorKey-8x8-v0,0,0,true,false,true,5000000,64,640,0.01,0.5
 MiniGrid-DoorKey-8x8-v0,0.00140625,0,false,false,true,5000000,64,640,0.01,0.5
+MiniGrid-Empty-6x6-v0,0,0,false,false,true,2000000,16,144,0.01,0
+MiniGrid-Empty-6x6-v0,0,0,true,false,true,2000000,16,144,0.01,0
+MiniGrid-Empty-6x6-v0,0.00625,0,false,false,true,2000000,16,144,0.01,0
+MiniGrid-Empty-6x6-Random-v0,0,0,false,false,true,2000000,16,144,0.01,0
+MiniGrid-Empty-6x6-Random-v0,0,0,true,false,true,2000000,16,144,0.01,0
+MiniGrid-Empty-6x6-Random-v0,0.00625,0,false,false,true,2000000,16,144,0.01,0
+MiniGrid-DoorKey-6x6-v0,0,0,false,false,true,5000000,64,640,0.01,0
+MiniGrid-DoorKey-6x6-v0,0,0,true,false,true,5000000,64,640,0.01,0
+MiniGrid-DoorKey-6x6-v0,0.00140625,0,false,false,true,5000000,64,640,0.01,0
