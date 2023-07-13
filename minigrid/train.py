@@ -18,7 +18,7 @@ from models import MiniGridAgent
 from storage import TrajectoryCollector
 from ppo import PPO
 from utils import plot_logs, get_state_tensor, TimeCostWrapper
-from customenvs import SimpleBoxesEnv, MazeBoxesEnv, SwitchingBoxesEnv
+from customenvs import SimpleBoxesEnv, MazeBoxesEnv, SwitchingBoxesEnv, EnergyBoxesEnv
 
 def parse_args():
     # fmt: off
@@ -48,6 +48,10 @@ def parse_args():
         help="value of the time cost")
     parser.add_argument("--action-cost", type=float, default=0,
         help="value of the action cost")
+    parser.add_argument("--time-bonus", type=float, default=0,
+        help="value of the time bonus (only for EnergyBoxes env)")
+    parser.add_argument("--box-reward", type=float, default=1,
+        help="value of the box reward (only for EnergyBoxes env)")
     parser.add_argument("--final-reward-penalty", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="If false, reward when goal is reached is +1. If true, a penalty is added for each step")
     parser.add_argument("--total-timesteps", type=int, default=1000000,
@@ -88,29 +92,34 @@ def parse_args():
     # fmt: on
     return args
 
-def make_env(env_id, fully_obs, time_cost, action_cost, final_reward_penalty, seed, idx, capture_video, run_name):
+def make_env(args, idx, run_name):
     def thunk():
-        if env_id == "MiniGrid-FourRooms-v0":
-            env = gym.make(env_id, max_steps=1024)
-        elif env_id == "SimpleBoxes":
+        if args.env_id == "MiniGrid-FourRooms-v0":
+            env = gym.make(args.env_id, max_steps=1024)
+        elif args.env_id == "SimpleBoxes":
             env = SimpleBoxesEnv()
-        elif env_id == "MazeBoxes":
+        elif args.env_id == "MazeBoxes":
             env = MazeBoxesEnv()
-        elif env_id == "SwitchingBoxes":
+        elif args.env_id == "SwitchingBoxes":
             env = SwitchingBoxesEnv()
+        elif args.env_id == "EnergyBoxes":
+            env = EnergyBoxesEnv(agent_start_dir="random",
+                                #agent_start_pos="random",
+                                time_bonus=args.time_bonus, 
+                                box_open_reward=args.box_reward)
         else:
-            env = gym.make(env_id)
+            env = gym.make(args.env_id)
         # get env max steps
-        if fully_obs: env = FullyObsWrapper(env)
+        if args.fully_obs: env = FullyObsWrapper(env)
         env = TimeCostWrapper(env, 
-                            time_cost=time_cost, 
-                            action_cost=action_cost,
-                            final_reward_penalty=final_reward_penalty,
+                            time_cost=args.time_cost, 
+                            action_cost=args.action_cost,
+                            final_reward_penalty=args.final_reward_penalty,
                             noops_actions=[4,6])
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = ReseedWrapper(env, 
                             seeds=list(range(100000)), # 100k different seeds for env.reset()
-                            seed_idx=seed)
+                            seed_idx=args.seed+idx*100)
         return env
     return thunk
 
@@ -127,16 +136,7 @@ num_updates = args.total_timesteps // args.batch_size
 # Set up vectorised environments
 print(args)
 envs = gym.vector.SyncVectorEnv(
-    [make_env(args.env_id, 
-              args.fully_obs, 
-              args.time_cost,
-              args.action_cost,
-              args.final_reward_penalty,
-              args.seed+i, 
-              i, 
-              args.capture_video, 
-              run_name)
-            for i in range(args.num_envs)]
+    [make_env(args, idx, run_name) for idx in range(args.num_envs)]
 )
 
 # Set seeds for reproducibility
@@ -155,7 +155,7 @@ obs_dim = get_state_tensor(envs.reset()[0])[0].shape
 agent = MiniGridAgent(obs_dim, envs.single_action_space.n, n_channels=4).to(device)
 
 # Define storage and ppo objects
-is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes", "SwitchingBoxes"]
+is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes", "SwitchingBoxes", "EnergyBoxes"]
 storage = TrajectoryCollector(envs, obs_dim, agent, args, device, is_boxes_env=is_boxes_env)
 ppo = PPO(agent, args, device)
 
@@ -208,11 +208,11 @@ for update in range(1, num_updates+1):
             print(f"Episodic return: {stats['episode_returns'].mean():.3f}±{stats['episode_returns'].std():.3f}")
             print(f"Episodic length: {stats['episode_lengths'].mean():.3f}±{stats['episode_lengths'].std():.3f}")
             if is_boxes_env: 
-                print(f"Eat counts: {stats['eat_counts'].mean():.3f}±{stats['eat_counts'].std():.3f}")
-                print(f"Red counts: {stats['red_counts'].mean():.3f}±{stats['red_counts'].std():.3f}")
-                print(f"Blue counts: {stats['blue_counts'].mean():.3f}±{stats['blue_counts'].std():.3f}")
+                print(f"Eat counts: {stats['eat_counts'].mean():.3f}±{stats['eat_counts'].std():.3f} "
+                    f"(R {stats['red_counts'].mean():.2f} "
+                    f"B {stats['blue_counts'].mean():.2f})")
                 print(f"Agent distances: {stats['agent_distances'].mean():.3f}±{stats['agent_distances'].std():.3f}")
-                print(f"Consecutive boxes: {stats['consecutive_boxes'].mean():.3f}±{stats['consecutive_boxes'].std():.3f}")
+                #print(f"Consecutive boxes: {stats['consecutive_boxes'].mean():.3f}±{stats['consecutive_boxes'].std():.3f}")
                 print(f"Mix rate: {stats['mix_rate'].mean():.3f}±{stats['mix_rate'].std():.3f}")
 
     # Plot stats
