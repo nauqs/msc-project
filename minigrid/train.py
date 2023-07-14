@@ -243,6 +243,7 @@ for update in range(1, num_updates+1):
 
             wandb.log({
                 "average_return": stats['episode_returns'].mean(),
+                "average_length": stats['episode_lengths'].mean(),
                 "average_eat_count": stats['eat_counts'].mean(),
                 "cumulative_eat_count": cumulative_eat_counts,
                 "average_red_count": stats['red_counts'].mean(),

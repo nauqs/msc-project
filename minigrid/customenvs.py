@@ -528,9 +528,7 @@ class EnergyBoxesEnv(MiniGridEnv):
 
         self.agent_pos = self._rand_pos() if self.start_pos_random else self.agent_start_pos
         self.agent_dir = self._rand_dir() if self.start_dir_random else self.agent_start_dir
-
-        print(self.agent_pos, self.agent_dir)
-
+        
         self.previous_agent_pos = self.agent_start_pos
         self.energy = self.initial_energy
 
