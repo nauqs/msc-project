@@ -94,6 +94,9 @@ def parse_args():
 
 def make_env(args, idx, run_name):
     def thunk():
+
+        env_seed = args.seed + idx * 100
+
         if args.env_id == "MiniGrid-FourRooms-v0":
             env = gym.make(args.env_id, max_steps=1024)
         elif args.env_id == "SimpleBoxes":
@@ -104,22 +107,24 @@ def make_env(args, idx, run_name):
             env = SwitchingBoxesEnv()
         elif args.env_id == "EnergyBoxes":
             env = EnergyBoxesEnv(agent_start_dir="random",
-                                #agent_start_pos="random",
+                                agent_start_pos=(1,1),
                                 time_bonus=args.time_bonus, 
-                                box_open_reward=args.box_reward)
+                                box_open_reward=args.box_reward,
+                                seed=env_seed)
         else:
             env = gym.make(args.env_id)
         # get env max steps
         if args.fully_obs: env = FullyObsWrapper(env)
-        env = TimeCostWrapper(env, 
-                            time_cost=args.time_cost, 
-                            action_cost=args.action_cost,
-                            final_reward_penalty=args.final_reward_penalty,
-                            noops_actions=[4,6])
+        if args.env_id != "EnergyBoxes":
+            env = TimeCostWrapper(env, 
+                                time_cost=args.time_cost, 
+                                action_cost=args.action_cost,
+                                final_reward_penalty=args.final_reward_penalty,
+                                noops_actions=[4,6])
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = ReseedWrapper(env, 
                             seeds=list(range(100000)), # 100k different seeds for env.reset()
-                            seed_idx=args.seed+idx*100)
+                            seed_idx=env_seed)
         return env
     return thunk
 

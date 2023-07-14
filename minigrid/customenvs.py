@@ -3,6 +3,7 @@ from minigrid.core.grid import Grid
 from minigrid.core.mission import MissionSpace
 from minigrid.core.world_object import Door, Goal, Key, Wall, Box
 from minigrid.minigrid_env import MiniGridEnv
+from gymnasium.utils import seeding
 from minigrid.core.world_object import WorldObj, fill_coords, point_in_rect, point_in_line, COLORS
 from minigrid.core.constants import (
     COLOR_TO_IDX,
@@ -429,21 +430,25 @@ class EnergyBoxesEnv(MiniGridEnv):
         max_steps: int | None = None,
         refill_prob=0.1,
         initial_energy=10,
-        time_bonus=0.05,
+        time_bonus=0.1,
         box_open_reward=0,
+        seed=None,
         **kwargs,
-    ):
+    ):  
+        
+        # set seed
+        self.seed = seed
+
+        self.width = size
+        self.height = size
         
         # set up initial positions
-        if agent_start_pos == "random":
-            self.agent_start_pos = self._rand_pos()
-        else: 
-            self.agent_start_pos = agent_start_pos
+        self.box_positions = [(1, self.height-2), (self.width-2, 1)]
+        self.start_pos_random = agent_start_pos == "random"
+        self.start_dir_random = agent_start_dir == "random"
 
-        if agent_start_dir == "random":
-            self.agent_start_dir = self._rand_dir()
-        else:
-            self.agent_start_dir = agent_start_dir
+        self.agent_start_pos = self._rand_pos() if self.start_pos_random else agent_start_pos
+        self.agent_start_dir = self._rand_dir() if self.start_dir_random else agent_start_dir
         
         # box and goal dynamics
         self.refill_prob = refill_prob
@@ -463,7 +468,7 @@ class EnergyBoxesEnv(MiniGridEnv):
         self.eat_count = 0
         self.red_count = 0
         self.blue_count = 0
-        self.previous_agent_pos = agent_start_pos
+        self.previous_agent_pos = self.agent_start_pos
         self.agent_distance = 0
         self.last_box_opened = None
         self.consecutive_boxes = 0
@@ -478,7 +483,11 @@ class EnergyBoxesEnv(MiniGridEnv):
         )
 
     def _rand_pos(self):
-        return (self.np_random.integers(1, self.width - 1), self.np_random.integers(1, self.height - 1))
+        # anywhere empty
+        pos = self.np_random.randint(1, self.width-1, size=2)
+        while self.grid.get(*pos) is None:
+            pos = self.np_random.randint(1, self.width-1, size=2)
+        return pos
     
     def _rand_dir(self):
         return self.np_random.integers(0, 4)
@@ -495,9 +504,14 @@ class EnergyBoxesEnv(MiniGridEnv):
         self.grid.wall_rect(0, 0, width, height)
 
         # Place the two boxes
-        self.box_positions = [(1, height-2), (width-2, 1)]
         self.grid.set(*self.box_positions[0], SimpleFoodBox(COLOR_NAMES[0])) # blue
         self.grid.set(*self.box_positions[1], SimpleFoodBox(COLOR_NAMES[4])) # red
+
+        # Put food in one of the boxes at random
+        if self.np_random.uniform() < 0.5:
+            self.grid.get(*self.box_positions[0]).state = 1
+        else:
+            self.grid.get(*self.box_positions[1]).state = 1
 
         # Place the agent
         if self.agent_start_pos is not None:
@@ -507,6 +521,20 @@ class EnergyBoxesEnv(MiniGridEnv):
             self.place_agent()
 
         self.mission = EnergyBoxesEnv._gen_mission()
+
+    def reset(self, **kwargs):
+
+        obs = super().reset(seed=kwargs.get("seed", self.seed))
+
+        self.agent_pos = self._rand_pos() if self.start_pos_random else self.agent_start_pos
+        self.agent_dir = self._rand_dir() if self.start_dir_random else self.agent_start_dir
+
+        print(self.agent_pos, self.agent_dir)
+
+        self.previous_agent_pos = self.agent_start_pos
+        self.energy = self.initial_energy
+
+        return obs
 
     def step(self, action):
         obs, reward, terminated, truncated, info = super().step(action)
@@ -545,10 +573,10 @@ class EnergyBoxesEnv(MiniGridEnv):
         
         if self.energy <= 0:
             terminated = True
-            self.energy = self.initial_energy
+            reward -= self.initial_energy * self.time_bonus
             self.reset()
-        else:
-             reward += self.time_bonus # reward TODO
+        
+        reward += self.time_bonus # reward TODO
         
         self.agent_distance += np.round(np.linalg.norm(np.array(self.agent_pos) - np.array(self.previous_agent_pos)))
         self.previous_agent_pos = self.agent_pos
