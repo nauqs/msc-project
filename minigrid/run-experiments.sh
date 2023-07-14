@@ -2,7 +2,7 @@
 
 resource=$1  # This should be 'cpu' or 'gpu'
 EXP_FILENAME=${2:-"experiments.csv"}
-csv_file="/cluster/project2/tithonus/msc-project/minigrid/experiments/$EXP_FILENAME"
+csv_file="/cluster/project2/tithonus/msc-project/minigrid/$EXP_FILENAME"
 output_directory="/cluster/project2/tithonus/logs"
 SEED_RANGE=$3  # This should be a range of seeds, like "1-100"
 
