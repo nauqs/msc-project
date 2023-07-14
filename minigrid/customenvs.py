@@ -453,14 +453,14 @@ class EnergyBoxesEnv(MiniGridEnv):
         # box and goal dynamics
         self.refill_prob = refill_prob
         mission_space = MissionSpace(mission_func=self._gen_mission)
-        if max_steps is None: max_steps = 256
+        if max_steps is None: max_steps = 512
         
         # energy initialization
         self.initial_energy = initial_energy
         self.energy = initial_energy
         self.time_energy_cost = 1
         self.action_energy_cost = 0 # TODO
-        self.box_energy_refuel = 10
+        self.box_energy_refuel = 8
         self.time_bonus = time_bonus
         self.box_open_reward = box_open_reward
 
@@ -528,7 +528,7 @@ class EnergyBoxesEnv(MiniGridEnv):
 
         self.agent_pos = self._rand_pos() if self.start_pos_random else self.agent_start_pos
         self.agent_dir = self._rand_dir() if self.start_dir_random else self.agent_start_dir
-        
+
         self.previous_agent_pos = self.agent_start_pos
         self.energy = self.initial_energy
 
