@@ -19,9 +19,9 @@ num_tasks=$(($(wc -l < "$csv_file") - 1))
 
 # Determine the resource to be used
 if [ "$resource" = "cpu" ]; then
-    resource_options="-l tmem=16G,h_vmem=16G,h_rt=4:00:00"
+    resource_options="-l tmem=16G,h_vmem=16G,h_rt=8:00:00"
 else
-    resource_options="-l tmem=16G,h_vmem=16G,h_rt=4:00:00,gpu=true"
+    resource_options="-l tmem=16G,h_vmem=16G,h_rt=8:00:00,gpu=true"
     RESOURCE="gpu"
 fi
 
