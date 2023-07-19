@@ -178,7 +178,7 @@ if args.wandb:
         env_type = "Boxes"
     else:
         env_type = args.env_id.split('-')[1]
-    wandb.init(project="experiments-energy-v2", 
+    wandb.init(project="experiments-energy", 
                entity="nauqs",
                name=run_name, 
                config=args)

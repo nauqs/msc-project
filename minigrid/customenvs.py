@@ -572,7 +572,7 @@ class EnergyBoxesEnv(MiniGridEnv):
         
         if self.energy <= 0:
             terminated = True
-            #reward -= self.initial_energy * self.time_bonus
+            reward -= self.initial_energy * self.time_bonus
             self.reset()
         
         reward += self.time_bonus # reward TODO
