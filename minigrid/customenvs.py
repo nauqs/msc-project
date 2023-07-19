@@ -432,6 +432,7 @@ class EnergyBoxesEnv(MiniGridEnv):
         initial_energy=10,
         time_bonus=0.1,
         box_open_reward=0,
+        box_energy_refuel=8,
         seed=None,
         **kwargs,
     ):  
@@ -460,7 +461,7 @@ class EnergyBoxesEnv(MiniGridEnv):
         self.energy = initial_energy
         self.time_energy_cost = 1
         self.action_energy_cost = 0 # TODO
-        self.box_energy_refuel = 8
+        self.box_energy_refuel = box_energy_refuel
         self.time_bonus = time_bonus
         self.box_open_reward = box_open_reward
 
@@ -494,7 +495,7 @@ class EnergyBoxesEnv(MiniGridEnv):
 
     @staticmethod
     def _gen_mission():
-        return "eat as many boxes as possible"
+        return "eat boxes to survive"
 
     def _gen_grid(self, width, height):
         # Create an empty grid
@@ -571,7 +572,7 @@ class EnergyBoxesEnv(MiniGridEnv):
         
         if self.energy <= 0:
             terminated = True
-            reward -= self.initial_energy * self.time_bonus
+            #reward -= self.initial_energy * self.time_bonus
             self.reset()
         
         reward += self.time_bonus # reward TODO
@@ -595,5 +596,38 @@ class EnergyBoxesEnv(MiniGridEnv):
             self.agent_distance = 0   
             self.consecutive_boxes = 0
             self.previous_agent_pos = self.agent_start_pos
+
+        return obs, reward, terminated, truncated, info
+
+
+class EnergyBoxesHardEnv(EnergyBoxesEnv):
+
+    def __init__(self, **kwargs):
+
+        super().__init__(
+            size=5,
+            initial_energy=5,
+            refill_prob=0,
+            box_energy_refuel=5,
+            **kwargs,
+        )
+    
+    def _gen_grid(self, width, height):
+
+        super()._gen_grid(width, height)
+
+        # set both boxes full
+        self.grid.get(*self.box_positions[0]).state = 1
+        self.grid.get(*self.box_positions[1]).state = 1
+
+    def step(self, action):
+
+        obs, reward, terminated, truncated, info = super().step(action)
+
+        # refill opposite box if the other is empty and last box open was this one
+        if self.grid.get(*self.box_positions[0]).state == 0 and self.last_box_opened == "blue":
+            self.grid.get(*self.box_positions[1]).state = 1
+        elif self.grid.get(*self.box_positions[1]).state == 0 and self.last_box_opened == "red":
+            self.grid.get(*self.box_positions[0]).state = 1
 
         return obs, reward, terminated, truncated, info

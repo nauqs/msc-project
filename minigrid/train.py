@@ -18,7 +18,7 @@ from models import MiniGridAgent
 from storage import TrajectoryCollector
 from ppo import PPO
 from utils import plot_logs, get_state_tensor, TimeCostWrapper
-from customenvs import SimpleBoxesEnv, MazeBoxesEnv, SwitchingBoxesEnv, EnergyBoxesEnv
+from customenvs import *
 
 def parse_args():
     # fmt: off
@@ -111,6 +111,12 @@ def make_env(args, idx, run_name):
                                 time_bonus=args.time_bonus, 
                                 box_open_reward=args.box_reward,
                                 seed=env_seed)
+        elif args.env_id == "EnergyBoxesHard":
+            env = EnergyBoxesHardEnv(agent_start_dir="random",
+                                agent_start_pos=(1,1),
+                                time_bonus=args.time_bonus, 
+                                box_open_reward=args.box_reward,
+                                seed=env_seed)
         else:
             env = gym.make(args.env_id)
         # get env max steps
@@ -172,7 +178,7 @@ if args.wandb:
         env_type = "Boxes"
     else:
         env_type = args.env_id.split('-')[1]
-    wandb.init(project="experiments-energy", 
+    wandb.init(project="experiments-energy-v2", 
                entity="nauqs",
                name=run_name, 
                config=args)
