@@ -121,7 +121,7 @@ def make_env(args, idx, run_name):
             env = gym.make(args.env_id)
         # get env max steps
         if args.fully_obs: env = FullyObsWrapper(env)
-        if args.env_id != "EnergyBoxes":
+        if "Energy" not in args.env_id:
             env = TimeCostWrapper(env, 
                                 time_cost=args.time_cost, 
                                 action_cost=args.action_cost,
@@ -166,7 +166,7 @@ obs_dim = get_state_tensor(envs.reset()[0])[0].shape
 agent = MiniGridAgent(obs_dim, envs.single_action_space.n, n_channels=4).to(device)
 
 # Define storage and ppo objects
-is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes", "SwitchingBoxes", "EnergyBoxes"]
+is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes", "SwitchingBoxes", "EnergyBoxes", "EnergyBoxesHard"]
 storage = TrajectoryCollector(envs, obs_dim, agent, args, device, is_boxes_env=is_boxes_env)
 ppo = PPO(agent, args, device)
 
