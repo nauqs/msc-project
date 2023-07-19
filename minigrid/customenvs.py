@@ -608,7 +608,7 @@ class EnergyBoxesHardEnv(EnergyBoxesEnv):
             size=5,
             initial_energy=5,
             refill_prob=0,
-            box_energy_refuel=5,
+            box_energy_refuel=6,
             **kwargs,
         )
     
