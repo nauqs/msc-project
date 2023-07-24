@@ -1,3 +1,0 @@
-env-id,time-cost,action-cost,final-reward-penalty,fully-obs,wandb,total-timesteps,num-envs,num-steps,ent-coef,gae_lambda,time_bonus,box_reward
-EnergyBoxesHard,0,0,false,false,true,20000000,32,512,0.02,0.95,0,1
-EnergyBoxesHard,0,0,false,false,true,20000000,32,512,0.02,0.95,0.1,0

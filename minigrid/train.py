@@ -17,7 +17,7 @@ import torch.optim as optim
 from models import MiniGridAgent
 from storage import TrajectoryCollector
 from ppo import PPO
-from utils import plot_logs, get_state_tensor, TimeCostWrapper
+from utils import *
 from customenvs import *
 
 def parse_args():
@@ -37,6 +37,7 @@ def parse_args():
         help="whether to capture videos of the agent performances (check out `videos` folder)")
     parser.add_argument("--wandb", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to use wandb to log metrics")
+    parser.add_argument("--wandb-project", type=str, default="experiments-test")
 
 
     # Algorithm specific arguments
@@ -52,13 +53,19 @@ def parse_args():
         help="value of the time bonus (only for EnergyBoxes env)")
     parser.add_argument("--box-reward", type=float, default=1,
         help="value of the box reward (only for EnergyBoxes env)")
+    parser.add_argument("--cont-energy-wrapper", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+        help="whether to use continuous energy wrapper for Experiment 3")
+    parser.add_argument("--refuel-goal", type=float, default=20,
+        help="value of the refuel for reaching goal (only for Experiment 3)")
+    parser.add_argument("--initial-energy", type=float, default=25,
+        help="value of the initial energy (only for Experiment 3)")
     parser.add_argument("--final-reward-penalty", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="If false, reward when goal is reached is +1. If true, a penalty is added for each step")
     parser.add_argument("--total-timesteps", type=int, default=1000000,
         help="total timesteps of the experiments")
     parser.add_argument("--learning-rate", type=float, default=2.5e-4,
         help="the learning rate of the optimizer")
-    parser.add_argument("--num-envs", type=int, default=16,
+    parser.add_argument("--num-envs", type=int, default=32,
         help="the number of parallel game environments")
     parser.add_argument("--num-steps", type=int, default=256,
         help="the number of steps to run in each environment per policy rollout")
@@ -96,6 +103,20 @@ def make_env(args, idx, run_name):
     def thunk():
 
         env_seed = args.seed + idx * 100
+
+        if args.cont_energy_wrapper:
+            env = gym.make(args.env_id)
+            env = ContEnergyWrapper(env,
+                                    refuel_goal=args.refuel_goal,
+                                    initial_energy=args.initial_energy,
+                                    time_bonus=args.time_bonus,
+                                    goal_reward=args.box_reward)
+            env = gym.wrappers.RecordEpisodeStatistics(env)
+            env = ReseedWrapper(env, 
+                                seeds=list(range(100000)),
+                                seed_idx=env_seed)
+            return env
+
 
         if args.env_id == "MiniGrid-FourRooms-v0":
             env = gym.make(args.env_id, max_steps=1024)
@@ -178,7 +199,7 @@ if args.wandb:
         env_type = "Boxes"
     else:
         env_type = args.env_id.split('-')[1]
-    wandb.init(project="experiments-energy", 
+    wandb.init(project=args.wandb_project, 
                entity="nauqs",
                name=run_name, 
                config=args)

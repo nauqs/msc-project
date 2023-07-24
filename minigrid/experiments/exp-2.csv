@@ -1,0 +1,5 @@
+env_id,wandb_project,total_timesteps,num_steps,ent_coef,time_cost,action_cost,final_reward_penalty,cont_energy_wrapper,time_bonus,box_reward,refuel_goal,initial_energy
+EnergyBoxes,exp-2,20000000,512,0.02,0,0,false,false,0,1,0,0
+EnergyBoxes,exp-2,20000000,512,0.02,0,0,false,false,0.1,0,0,0
+EnergyBoxesHard,exp-2,20000000,512,0.02,0,0,false,false,0,1,0,0
+EnergyBoxesHard,exp-2,20000000,512,0.02,0,0,false,false,0.1,0,0,0
