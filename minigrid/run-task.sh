@@ -9,8 +9,8 @@ NUM_SEEDS=${NUM_SEEDS}
 NUM_TASKS=${NUM_TASKS}
 
 # Calculate the seed and line number
-seed=$((START_SEED + (TASK_ID - 1) % NUM_SEEDS))
-line_number=$(((TASK_ID - 1) / NUM_SEEDS + 2))  # +2 because TASK_ID starts from 1 and line number from 2
+seed=$((START_SEED + (TASK_ID - 1) / NUM_TASKS))
+line_number=$(((TASK_ID - 1) % NUM_TASKS + 2))
 
 echo "TASK_ID is: $TASK_ID"
 echo "SEED is: $seed"
