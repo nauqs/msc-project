@@ -112,9 +112,7 @@ def make_env(args, idx, run_name):
                                     time_bonus=args.time_bonus,
                                     goal_reward=args.box_reward)
             env = gym.wrappers.RecordEpisodeStatistics(env)
-            env = ReseedWrapper(env, 
-                                seeds=list(range(100000)),
-                                seed_idx=env_seed)
+            #env = ReseedWrapper(env,  seeds=list(range(100000)), seed_idx=env_seed)
             return env
 
 
@@ -138,6 +136,12 @@ def make_env(args, idx, run_name):
                                 time_bonus=args.time_bonus, 
                                 box_open_reward=args.box_reward,
                                 seed=env_seed)
+        elif args.env_id == "EnergyBoxesDelay":
+            env = EnergyBoxesDelayEnv(agent_start_dir="random",
+                                agent_start_pos="random",
+                                time_bonus=args.time_bonus, 
+                                box_open_reward=args.box_reward,
+                                seed=env_seed)
         else:
             env = gym.make(args.env_id)
         # get env max steps
@@ -149,9 +153,7 @@ def make_env(args, idx, run_name):
                                 final_reward_penalty=args.final_reward_penalty,
                                 noops_actions=[4,6])
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = ReseedWrapper(env, 
-                            seeds=list(range(100000)), # 100k different seeds for env.reset()
-                            seed_idx=env_seed)
+        #env = ReseedWrapper(env, seeds=list(range(100000)),seed_idx=env_seed)
         return env
     return thunk
 
@@ -172,9 +174,9 @@ envs = gym.vector.SyncVectorEnv(
 )
 
 # Set seeds for reproducibility
-torch.manual_seed(args.seed)
-np.random.seed(args.seed)
 random.seed(args.seed)
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
 if args.cuda and torch.cuda.is_available():
     torch.cuda.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = True
@@ -187,7 +189,7 @@ obs_dim = get_state_tensor(envs.reset()[0])[0].shape
 agent = MiniGridAgent(obs_dim, envs.single_action_space.n, n_channels=4).to(device)
 
 # Define storage and ppo objects
-is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes", "SwitchingBoxes", "EnergyBoxes", "EnergyBoxesHard"]
+is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes", "SwitchingBoxes", "EnergyBoxes", "EnergyBoxesHard", "EnergyBoxesDelay"]
 storage = TrajectoryCollector(envs, obs_dim, agent, args, device, is_boxes_env=is_boxes_env)
 ppo = PPO(agent, args, device)
 

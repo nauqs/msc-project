@@ -433,12 +433,13 @@ class EnergyBoxesEnv(MiniGridEnv):
         time_bonus=0.1,
         box_open_reward=0,
         box_energy_refuel=8,
-        seed=None,
+        seed=0,
         **kwargs,
     ):  
         
         # set seed
         self.seed = seed
+        self.np_random, _ = seeding.np_random(self.seed)
 
         self.width = size
         self.height = size
@@ -484,10 +485,7 @@ class EnergyBoxesEnv(MiniGridEnv):
         )
 
     def _rand_pos(self):
-        # anywhere empty
-        pos = self.np_random.randint(1, self.width-1, size=2)
-        while self.grid.get(*pos) is None:
-            pos = self.np_random.randint(1, self.width-1, size=2)
+        pos = self.np_random.choice([(1,1), (self.width-2, self.height-2)])
         return pos
     
     def _rand_dir(self):
@@ -525,7 +523,8 @@ class EnergyBoxesEnv(MiniGridEnv):
 
     def reset(self, **kwargs):
 
-        obs = super().reset(seed=kwargs.get("seed", self.seed))
+        #self.np_random, self.seed = seeding.np_random(self.seed) # reset seed
+        obs = super().reset()
 
         self.agent_pos = self._rand_pos() if self.start_pos_random else self.agent_start_pos
         self.agent_dir = self._rand_dir() if self.start_dir_random else self.agent_start_dir
@@ -631,3 +630,20 @@ class EnergyBoxesHardEnv(EnergyBoxesEnv):
             self.grid.get(*self.box_positions[0]).state = 1
 
         return obs, reward, terminated, truncated, info
+
+
+class EnergyBoxesDelayEnv(EnergyBoxesEnv):
+    """
+    Subclass of EnergyBoxesEnv where the initial energy is high 
+    so that the agent can survive for a long time without eating.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            size=6,
+            initial_energy=100,
+            refill_prob=0.05,
+            box_energy_refuel=10,
+            max_steps=512,
+            **kwargs,
+        )
