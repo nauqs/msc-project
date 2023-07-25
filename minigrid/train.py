@@ -118,12 +118,6 @@ def make_env(args, idx, run_name):
 
         if args.env_id == "MiniGrid-FourRooms-v0":
             env = gym.make(args.env_id, max_steps=1024)
-        elif args.env_id == "SimpleBoxes":
-            env = SimpleBoxesEnv()
-        elif args.env_id == "MazeBoxes":
-            env = MazeBoxesEnv()
-        elif args.env_id == "SwitchingBoxes":
-            env = SwitchingBoxesEnv()
         elif args.env_id == "EnergyBoxes":
             env = EnergyBoxesEnv(agent_start_dir="random",
                                 agent_start_pos=(1,1),
@@ -189,7 +183,7 @@ obs_dim = get_state_tensor(envs.reset()[0])[0].shape
 agent = MiniGridAgent(obs_dim, envs.single_action_space.n, n_channels=4).to(device)
 
 # Define storage and ppo objects
-is_boxes_env = args.env_id in ["SimpleBoxes", "MazeBoxes", "SwitchingBoxes", "EnergyBoxes", "EnergyBoxesHard", "EnergyBoxesDelay"]
+is_boxes_env = args.env_id in ["EnergyBoxes", "EnergyBoxesHard", "EnergyBoxesDelay"]
 storage = TrajectoryCollector(envs, obs_dim, agent, args, device, is_boxes_env=is_boxes_env)
 ppo = PPO(agent, args, device)
 
