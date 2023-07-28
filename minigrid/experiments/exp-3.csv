@@ -1,7 +1,9 @@
 env_id,wandb_project,total_timesteps,num_steps,ent_coef,time_cost,action_cost,final_reward_penalty,cont_energy_wrapper,time_bonus,box_reward,refuel_goal,initial_energy
 MiniGrid-Empty-6x6-v0,experiment-3,10000000,512,0.02,0,0,false,true,0,1,0,25
 MiniGrid-Empty-6x6-v0,experiment-3,10000000,512,0.02,0,0,false,true,1,0,0,25
-MiniGrid-DoorKey-6x6-v0,experiment-3,20000000,1024,0.02,0,0,false,true,0,1,0,50
-MiniGrid-DoorKey-6x6-v0,experiment-3,20000000,1024,0.02,0,0,false,true,1,0,0,50
+MiniGrid-DoorKey-5x5-v0,experiment-3,20000000,1024,0.02,0,0,false,true,0,1,0,50
+MiniGrid-DoorKey-5x5-v0,experiment-3,20000000,1024,0.02,0,0,false,true,1,0,0,50
 MiniGrid-FourRooms-v0,experiment-3,20000000,1024,0.02,0,0,false,true,0,1,0,50
 MiniGrid-FourRooms-v0,experiment-3,20000000,1024,0.02,0,0,false,true,1,0,0,50
+MiniGrid-Empty-Random-6x6-v0,experiment-3,10000000,512,0.02,0,0,false,true,0,1,0,25
+MiniGrid-Empty-Random-6x6-v0,experiment-3,10000000,512,0.02,0,0,false,true,1,0,0,25
