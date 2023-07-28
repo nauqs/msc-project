@@ -41,7 +41,7 @@ def parse_args():
 
 
     # Algorithm specific arguments
-    parser.add_argument("--env-id", type=str, default=f'MiniGrid-Empty-8x8-v0',
+    parser.add_argument("--env-id", type=str, default=f'MiniGrid-Empty-6x6-v0',
         help="the id of the environment")
     parser.add_argument("--fully-obs", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to use the fully observable wrapper")

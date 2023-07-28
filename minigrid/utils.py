@@ -93,32 +93,31 @@ class ContEnergyWrapper(gym.Wrapper):
     def __init__(self, env, refuel_goal, initial_energy, time_bonus=0.1, goal_reward=0):
 
         super().__init__(env)
-        self.refuel_goal = refuel_goal
         self.initial_energy = initial_energy
         self.time_bonus = time_bonus
         self.goal_reward = goal_reward
-        self.initial_refuel_goal = refuel_goal
+        self.refuel_goal = initial_energy
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
         self.energy = self.initial_energy
-        self.refuel_goal = self.initial_refuel_goal
+        self.refuel_goal = self.initial_energy
         return obs
     
     def step(self, action):
         """
         When energy reaches 0, episode terminates
-        When agent reaches goal, episode doesn't terminate, energy gets refilled
+        When agent reaches goal, episode doesn't terminate, energy resets to initial
         """
         obs, reward, terminated, truncated, info = self.env.step(action)
 
         self.energy -= 1
 
-        if terminated and reward > 0:
-            self.energy += self.refuel_goal
+        if (terminated or truncated) and reward > 0:
+            self.energy = self.refuel_goal
             reward = self.goal_reward
-            self.refuel_goal -= 1
             terminated = False
+            #self.refuel_goal -= 1
         elif self.energy <= 0:
             terminated = True
             reward = -self.initial_energy * self.time_bonus
