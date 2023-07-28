@@ -28,6 +28,7 @@ class TrajectoryCollector:
         episode_returns, episode_lengths, episode_timesteps = [], [], []
         if self.is_boxes_env: 
             red_counts, blue_counts, agent_distances, consecutive_boxes, mix_rates = [], [], [], [], []
+        goal_counts = []
         state = self.envs.reset()[0]
         next_obs = get_state_tensor(state).to(self.device)
         next_done = torch.zeros(self.args.num_envs).to(self.device)
@@ -65,6 +66,8 @@ class TrajectoryCollector:
                         episode_returns.append(env_final_info['episode']['r'].item())
                         episode_lengths.append(env_final_info['episode']['l'].item())
                         episode_timesteps.append(self.global_step)
+                        if "goal_counts" in env_final_info:
+                            goal_counts.append(env_final_info['goal_counts'])
 
         with torch.no_grad():
             next_value = self.agent.get_value(next_obs).reshape(1, -1)
@@ -99,5 +102,7 @@ class TrajectoryCollector:
             stats['agent_distances'] = np.array(agent_distances)
             stats['consecutive_boxes'] = np.array(consecutive_boxes)
             stats['mix_rate'] = np.array(mix_rates)
+        if len(goal_counts) > 0:
+            stats['goal_counts'] = np.array(goal_counts)
         
         return batch, stats

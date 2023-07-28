@@ -281,11 +281,16 @@ for update in range(1, num_updates+1):
                 "timestep": stats['initial_timestep'],
             })
         else:
+            extra_metrics = {}
+            if args.cont_energy_wrapper:
+                extra_metrics["goal_counts"] = stats['goal_counts'].mean()
+                extra_metrics["subepisode_length"] = (stats['goal_counts'] / stats['episode_lengths']).mean()
             wandb.log({
                 "average_return": stats['episode_returns'].mean(),
                 "average_length": stats['episode_lengths'].mean(),
                 "success_rate": (stats['episode_returns'] > 0).astype(int).mean(),
                 "timestep": stats['initial_timestep'],
+                **extra_metrics
             })
         for i in range(len(stats['episode_returns'])):
             wandb.log({

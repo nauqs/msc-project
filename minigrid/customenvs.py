@@ -72,6 +72,7 @@ class EnergyBoxesEnv(MiniGridEnv):
         box_open_reward=0,
         box_energy_refuel=8,
         seed=0,
+        track_timestep_counts=False,
         **kwargs,
     ):  
         
@@ -112,6 +113,8 @@ class EnergyBoxesEnv(MiniGridEnv):
         self.agent_distance = 0
         self.last_box_opened = None
         self.consecutive_boxes = 0
+        self.track_timestep_counts = track_timestep_counts
+        self.timestep_counts = np.zeros(max_steps)
 
         super().__init__(
             mission_space=mission_space,
@@ -187,6 +190,7 @@ class EnergyBoxesEnv(MiniGridEnv):
                     fwd_cell.state = 0
 
                     # stats tracking
+                    if self.track_timestep_counts: self.timestep_counts[self.step_count-1] += 1
                     if fwd_cell.color == "red":
                         self.red_count += 1
                         if self.last_box_opened == "red": self.consecutive_boxes += 1
@@ -224,6 +228,7 @@ class EnergyBoxesEnv(MiniGridEnv):
         info['agent_distance'] = self.agent_distance
         info['consecutive_boxes'] = self.consecutive_boxes
         info['mix_rate'] = 1.0 - (self.consecutive_boxes + 1 / self.eat_count) if self.eat_count > 0 else 0.0
+        if self.track_timestep_counts: info['timestep_counts'] = self.timestep_counts
         
         # reset stats if episode ended
         if truncated or terminated:

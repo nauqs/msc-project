@@ -90,18 +90,20 @@ class ContEnergyWrapper(gym.Wrapper):
      continuous with the energy budget framework 
      """
     
-    def __init__(self, env, refuel_goal, initial_energy, time_bonus=0.1, goal_reward=0):
+    def __init__(self, env, refuel_goal, initial_energy, time_bonus=0.1, goal_reward=0, max_steps=512):
 
         super().__init__(env)
         self.initial_energy = initial_energy
         self.time_bonus = time_bonus
         self.goal_reward = goal_reward
         self.refuel_goal = initial_energy
+        self.goal_counts = 0
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
         self.energy = self.initial_energy
         self.refuel_goal = self.initial_energy
+        self.goal_counts = 0
         return obs
     
     def step(self, action):
@@ -116,12 +118,15 @@ class ContEnergyWrapper(gym.Wrapper):
         if (terminated or truncated) and reward > 0:
             self.energy = self.refuel_goal
             reward = self.goal_reward
-            terminated = False
-            #self.refuel_goal -= 1
-        elif self.energy <= 0:
+            self.goal_counts += 1
+            terminated, truncated = False, False
+        if self.env.step_count >= self.env.max_steps:
+            truncated = True
+        if self.energy <= 0:
             terminated = True
             reward = -self.initial_energy * self.time_bonus
         
+        info['goal_counts'] = self.goal_counts
         reward += self.time_bonus
 
         return obs, reward, terminated, truncated, info
