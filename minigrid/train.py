@@ -35,7 +35,7 @@ def parse_args():
         help="whether to print metrics and training logs")
     parser.add_argument("--capture-video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="whether to capture videos of the agent performances (check out `videos` folder)")
-    parser.add_argument("--wandb", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+    parser.add_argument("--wandb", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="whether to use wandb to log metrics")
     parser.add_argument("--wandb-project", type=str, default="experiments-test")
 
@@ -209,6 +209,7 @@ if is_boxes_env:
     cumulative_agent_distances = 0
 
 # Run training algorithm
+print("Start training...")
 for update in range(1, num_updates+1):
 
     # Collect trajectories
