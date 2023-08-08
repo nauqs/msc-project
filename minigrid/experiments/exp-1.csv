@@ -8,3 +8,12 @@ MiniGrid-DoorKey-8x8-v0,experiment-1,5000000,640,0.01,0.00140625,0,false,false,0
 MiniGrid-FourRooms-v0,experiment-1,5000000,1024,0.01,0,0,false,false,0,0,0,0,0.95
 MiniGrid-FourRooms-v0,experiment-1,5000000,1024,0.01,0,0,true,false,0,0,0,0,0.95
 MiniGrid-FourRooms-v0,experiment-1,5000000,1024,0.01,0.00087890625,0,false,false,0,0,0,0,0.95
+MiniGrid-Unlock-v0,experiment-1,5000000,300,0.02,0,0,false,false,0,0,0,0,0.95
+MiniGrid-Unlock-v0,experiment-1,5000000,300,0.02,0,0,true,false,0,0,0,0,0.95
+MiniGrid-Unlock-v0,experiment-1,5000000,300,0.02,0.003,0,false,false,0,0,0,0,0.95
+MiniGrid-SimpleCrossingS9N2-v0,experiment-1,3000000,360,0.01,0,0,false,false,0,0,0,0,0.95
+MiniGrid-SimpleCrossingS9N2-v0,experiment-1,3000000,360,0.01,0,0,true,false,0,0,0,0,0.95
+MiniGrid-SimpleCrossingS9N2-v0,experiment-1,3000000,360,0.01,0.0025,0,false,false,0,0,0,0,0.95
+MiniGrid-KeyCorridorS3R2-v0,experiment-1,5000000,270,0.02,0,0,false,false,0,0,0,0,0.95
+MiniGrid-KeyCorridorS3R2-v0,experiment-1,5000000,270,0.02,0,0,true,false,0,0,0,0,0.95
+MiniGrid-KeyCorridorS3R2-v0,experiment-1,5000000,270,0.02,0.003333333333,0,false,false,0,0,0,0,0.95
