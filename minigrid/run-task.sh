@@ -20,7 +20,7 @@ echo "Line number is: $line_number"
 LINE=$(sed "${line_number}q;d" $CSV_FILE)
 
 # Parse the configuration
-IFS=, read -r env_id wandb_project total_timesteps num_steps ent_coef time_cost action_cost final_reward_penalty cont_energy_wrapper time_bonus box_reward refuel_goal initial_energy <<< "$LINE"
+IFS=, read -r env_id wandb_project total_timesteps num_steps ent_coef time_cost action_cost final_reward_penalty cont_energy_wrapper time_bonus box_reward refuel_goal initial_energy gae_lambda <<< "$LINE"
 
 # Determine the --cuda parameter based on the RESOURCE environment variable
 if [ "$RESOURCE" = "gpu" ]; then
@@ -41,7 +41,7 @@ timestamp=$(date "+%m%d-%H%M%S.%3N")
 exp_name="${timestamp}_${TASK_ID}_${seed}"
 
 # Execute the command
-echo "Executing: /cluster/project2/tithonus/miniconda3/bin/conda run -n minigrid python -u train.py --env-id $env_id --wandb $wandb --wandb-project $wandb_project --total-timesteps $total_timesteps --num-steps $num_steps --ent-coef $ent_coef --time-cost $time_cost --action-cost $action_cost --final-reward-penalty $final_reward_penalty --cont-energy-wrapper $cont_energy_wrapper --time-bonus $time_bonus --box-reward $box_reward --refuel-goal $refuel_goal --initial-energy $initial_energy --seed $seed --exp-name $exp_name $cuda_option"
+echo "Executing: /cluster/project2/tithonus/miniconda3/bin/conda run -n minigrid python -u train.py --env-id $env_id --wandb $wandb --wandb-project $wandb_project --total-timesteps $total_timesteps --num-steps $num_steps --ent-coef $ent_coef --time-cost $time_cost --action-cost $action_cost --final-reward-penalty $final_reward_penalty --cont-energy-wrapper $cont_energy_wrapper --time-bonus $time_bonus --box-reward $box_reward --refuel-goal $refuel_goal --initial-energy $initial_energy --gae-lambda $gae_lambda --seed $seed --exp-name $exp_name $cuda_option"
 cd /cluster/project2/tithonus/msc-project/minigrid
 free -g
-/cluster/project2/tithonus/miniconda3/bin/conda run -n minigrid python -u train.py --env-id $env_id --wandb $wandb --wandb-project $wandb_project --total-timesteps $total_timesteps --num-steps $num_steps --ent-coef $ent_coef --time-cost $time_cost --action-cost $action_cost --final-reward-penalty $final_reward_penalty --cont-energy-wrapper $cont_energy_wrapper --time-bonus $time_bonus --box-reward $box_reward --refuel-goal $refuel_goal --initial-energy $initial_energy --seed $seed --exp-name $exp_name $cuda_option
+/cluster/project2/tithonus/miniconda3/bin/conda run -n minigrid python -u train.py --env-id $env_id --wandb $wandb --wandb-project $wandb_project --total-timesteps $total_timesteps --num-steps $num_steps --ent-coef $ent_coef --time-cost $time_cost --action-cost $action_cost --final-reward-penalty $final_reward_penalty --cont-energy-wrapper $cont_energy_wrapper --time-bonus $time_bonus --box-reward $box_reward --refuel-goal $refuel_goal --initial-energy $initial_energy --gae-lambda $gae_lambda --seed $seed --exp-name $exp_name $cuda_option
