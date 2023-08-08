@@ -1,0 +1,13 @@
+env_id,wandb_project,total_timesteps,num_steps,ent_coef,time_cost,action_cost,final_reward_penalty,cont_energy_wrapper,time_bonus,box_reward,refuel_goal,initial_energy,gae_lambda
+MiniGrid-Empty-16x16-v0,experiment-1-mc,1000000,1024,0.01,0,0,false,false,0,0,0,0,1
+MiniGrid-Empty-16x16-v0,experiment-1-mc,1000000,1024,0.01,0,0,true,false,0,0,0,0,1
+MiniGrid-Empty-16x16-v0,experiment-1-mc,1000000,1024,0.01,0.00087890625,0,false,false,0,0,0,0,1
+MiniGrid-DoorKey-8x8-v0,experiment-1-mc,5000000,640,0.01,0,0,false,false,0,0,0,0,1
+MiniGrid-DoorKey-8x8-v0,experiment-1-mc,5000000,640,0.01,0,0,true,false,0,0,0,0,1
+MiniGrid-DoorKey-8x8-v0,experiment-1-mc,5000000,640,0.01,0.00140625,0,false,false,0,0,0,0,1
+MiniGrid-FourRooms-v0,experiment-1-mc,5000000,1024,0.01,0,0,false,false,0,0,0,0,1
+MiniGrid-FourRooms-v0,experiment-1-mc,5000000,1024,0.01,0,0,true,false,0,0,0,0,1
+MiniGrid-FourRooms-v0,experiment-1-mc,5000000,1024,0.01,0.00087890625,0,false,false,0,0,0,0,1
+MiniGrid-KeyCorridorS3R2-v0,experiment-1-b,5000000,270,0.02,0,0,false,false,0,0,0,0,1
+MiniGrid-KeyCorridorS3R2-v0,experiment-1-b,5000000,270,0.02,0,0,true,false,0,0,0,0,1
+MiniGrid-KeyCorridorS3R2-v0,experiment-1-b,5000000,270,0.02,0.003333333333,0,false,false,0,0,0,0,1
