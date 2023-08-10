@@ -3,3 +3,5 @@ EnergyBoxes,exp-2,20000000,512,0.02,0,0,false,false,0,1,0,0,0.95
 EnergyBoxes,exp-2,20000000,512,0.02,0,0,false,false,0.1,0,0,0,0.95
 EnergyBoxesHard,exp-2,20000000,512,0.02,0,0,false,false,0,1,0,0,0.95
 EnergyBoxesHard,exp-2,20000000,512,0.02,0,0,false,false,0.1,0,0,0,0.95
+EnergyBoxesDelay,experiment-2,20000000,512,0.02,0,0,false,false,0,1,0,0,0.95
+EnergyBoxesDelay,experiment-2,20000000,512,0.02,0,0,false,false,0.1,0,0,0,0.95
