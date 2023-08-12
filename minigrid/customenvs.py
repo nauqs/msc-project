@@ -227,7 +227,7 @@ class EnergyBoxesEnv(MiniGridEnv):
         info['blue_count'] = self.blue_count
         info['agent_distance'] = self.agent_distance
         info['consecutive_boxes'] = self.consecutive_boxes
-        info['mix_rate'] = 1.0 - (self.consecutive_boxes + 1 / self.eat_count) if self.eat_count > 0 else 0.0
+        info['mix_rate'] = 1.0 - ((self.consecutive_boxes + 1) / self.eat_count) if self.eat_count > 0 else 0.0
         if self.track_timestep_counts: info['timestep_counts'] = self.timestep_counts
         
         # reset stats if episode ended
