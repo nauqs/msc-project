@@ -11,7 +11,7 @@ Arnau Quindós
 Dr. Laura Toni, Eduardo Pignatelli
 
 #### Manuscript:
-[Manuscript pdf](MSc_project.pdf)
+[MSc_project.pdf](MSc_project.pdf)
 
 #### Abstract 
 In this study, we investigate the idea of using the agent's lifetime as reward in reinforcement learning, motivated by the fact that good reward design usually requires in-depth task-specific knowledge and the universal nature of time. We divide the research into two different methodologies: firstly, we examine how time could improve reward shaping, with results indicating that time can serve as a reward shaper and suggesting a bigger potential for using time as the sole reward. In our second approach, we train agents in the absence of explicit goal-oriented rewards, under the assumption that termination probabilities inherently encode the goals of the problem, an idea observed in many real-world settings. Results show that time-based agents can come close to or even surpass agents trained in the traditional setting both in end performance and learning speed. Our findings highlight the significance and potential of an agent's lifetime in reward design but with significant challenges that need to be overcome. Further research is needed to validate our methodologies in diverse and more complex environments and to explore ways of generalising this idea to a broader spectrum of reinforcement learning domains.
